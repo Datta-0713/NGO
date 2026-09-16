@@ -11,18 +11,23 @@ const CreditsPage: React.FC = () => {
   const [adjustForm, setAdjustForm] = useState({ userId: '', amount: '', reason: '' });
   const [adjusting, setAdjusting] = useState(false);
   const [adjustSuccess, setAdjustSuccess] = useState(false);
+  const [adjustError, setAdjustError] = useState('');
 
 
   const handleAdjust = async () => {
-    if (!adjustForm.userId || !adjustForm.amount || !adjustForm.reason) return;
+    if (!adjustForm.userId || !adjustForm.amount || !adjustForm.reason) {
+      setAdjustError('All fields are required.');
+      return;
+    }
     setAdjusting(true);
+    setAdjustError('');
     try {
       await creditsApi.adjustCredits(adjustForm.userId, Number(adjustForm.amount), adjustForm.reason);
       setAdjustSuccess(true);
       setAdjustForm({ userId: '', amount: '', reason: '' });
       setTimeout(() => { setAdjustModalOpen(false); setAdjustSuccess(false); }, 1500);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      setAdjustError(e?.response?.data?.message || 'Failed to adjust credits. Check the User ID is correct.');
     } finally {
       setAdjusting(false);
     }
@@ -80,6 +85,11 @@ const CreditsPage: React.FC = () => {
           {adjustSuccess && (
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 font-medium text-center">
               ✓ Credits adjusted successfully!
+            </div>
+          )}
+          {adjustError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+              {adjustError}
             </div>
           )}
           <Input label="User ID" placeholder="MongoDB ObjectId of user" value={adjustForm.userId} onChange={e => setAdjustForm(f => ({...f, userId: e.target.value}))} />

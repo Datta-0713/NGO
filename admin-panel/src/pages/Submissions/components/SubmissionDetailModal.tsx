@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { MapPin, Calendar, Tag, CheckCircle, XCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { safeFormat } from '@/utils/date';
 import type { NewsItem } from '@/types';
 
 interface Props {
@@ -110,7 +110,7 @@ export const SubmissionDetailModal: React.FC<Props> = ({ submission, onClose }) 
         </div>
         <div className="flex items-center gap-1.5 text-sm text-muted">
           <Calendar size={14} />
-          <span>{format(new Date(submission.date || submission.createdAt), 'MMM d, yyyy')}</span>
+          <span>{safeFormat(submission.date || submission.createdAt, 'MMM d, yyyy')}</span>
         </div>
       </div>
 

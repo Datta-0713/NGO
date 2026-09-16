@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Avatar } from '@/components/ui/Avatar';
 import { MapPin, Mail, BookOpen, Heart, Coins, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
+import { safeFormat } from '@/utils/date';
 import type { User } from '@/types';
 
 interface UserDetailModalProps {
@@ -27,7 +27,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose 
         {[
           { icon: Mail, label: 'Email', value: user.email },
           { icon: MapPin, label: 'Location', value: user.location || 'Not specified' },
-          { icon: Calendar, label: 'Joined', value: format(new Date(user.createdAt), 'MMM d, yyyy') },
+          { icon: Calendar, label: 'Joined', value: safeFormat(user.createdAt, 'MMM d, yyyy') },
         ].map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex items-start gap-2.5 p-3 bg-gray-50 rounded-lg">
             <Icon size={16} className="text-muted mt-0.5 flex-shrink-0" />

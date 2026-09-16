@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { CATEGORIES } from '@/constants';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { createNews, fetchFeed } from '@/store/slices/newsSlice';
-import type { AppDispatch } from '@/store';
-import { Upload, X, Plus } from 'lucide-react';
+import type { AppDispatch, RootState } from '@/store';
+import { Upload, X, Plus, AlertCircle, CheckCircle } from 'lucide-react';
 
 export const CreateNewsForm: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const { error: storeError } = useSelector((state: RootState) => state.news);
+
   const [formData, setFormData] = useState({
     title: '', description: '', location: '', date: '', category: CATEGORIES[0] as string,
   });
@@ -16,6 +18,8 @@ export const CreateNewsForm: React.FC = () => {
   const [previews, setPreviews] = useState<string[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
+  const [localError, setLocalError] = useState('');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -31,19 +35,47 @@ export const CreateNewsForm: React.FC = () => {
     setPreviews(prev => prev.filter((_, i) => i !== idx));
   };
 
+  const resetForm = () => {
+    setFormData({ title: '', description: '', location: '', date: '', category: CATEGORIES[0] as string });
+    setFiles([]);
+    setPreviews([]);
+    setLocalError('');
+    setSuccessMsg('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLocalError('');
+    setSuccessMsg('');
+
+    if (!formData.title || !formData.description || !formData.location || !formData.date) {
+      setLocalError('Please fill in all required fields.');
+      return;
+    }
+
     setSubmitting(true);
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => data.append(key, value));
     files.forEach(f => data.append('media', f));
-    await dispatch(createNews(data));
-    setFormData({ title: '', description: '', location: '', date: '', category: CATEGORIES[0] as string });
-    setFiles([]);
-    setPreviews([]);
-    setExpanded(false);
+
+    const result = await dispatch(createNews(data));
+
     setSubmitting(false);
-    dispatch(fetchFeed({}));
+
+    if (createNews.fulfilled.match(result)) {
+      setSuccessMsg('News published successfully!');
+      resetForm();
+      // Refresh the feed list
+      dispatch(fetchFeed({}));
+      // Auto-collapse after 2 seconds
+      setTimeout(() => {
+        setExpanded(false);
+        setSuccessMsg('');
+      }, 2000);
+    } else {
+      // Keep the form open with error
+      setLocalError((result.payload as string) || storeError || 'Failed to publish news. Please try again.');
+    }
   };
 
   if (!expanded) {
@@ -67,12 +99,28 @@ export const CreateNewsForm: React.FC = () => {
         <h2 className="text-base font-semibold text-gray-900">Publish Official News</h2>
         <button
           type="button"
-          onClick={() => setExpanded(false)}
+          onClick={() => { setExpanded(false); resetForm(); }}
           className="p-1.5 rounded-lg hover:bg-gray-100 text-muted transition-colors"
         >
           <X size={16} />
         </button>
       </div>
+
+      {/* Error message */}
+      {localError && (
+        <div className="flex items-start gap-2.5 p-3.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+          <span>{localError}</span>
+        </div>
+      )}
+
+      {/* Success message */}
+      {successMsg && (
+        <div className="flex items-start gap-2.5 p-3.5 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
+          <CheckCircle size={16} className="mt-0.5 flex-shrink-0" />
+          <span>{successMsg}</span>
+        </div>
+      )}
 
       <Input
         label="Title *"
@@ -156,10 +204,11 @@ export const CreateNewsForm: React.FC = () => {
             </label>
           )}
         </div>
+        <p className="text-xs text-muted">Supported: JPG, PNG, GIF, MP4, MOV (max 50MB each)</p>
       </div>
 
       <div className="flex justify-end gap-3 pt-2">
-        <Button type="button" variant="secondary" onClick={() => setExpanded(false)}>
+        <Button type="button" variant="secondary" onClick={() => { setExpanded(false); resetForm(); }}>
           Cancel
         </Button>
         <Button type="submit" loading={submitting}>

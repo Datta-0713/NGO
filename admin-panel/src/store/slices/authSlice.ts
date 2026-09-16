@@ -56,7 +56,7 @@ const authSlice = createSlice({
         state.accessToken = action.payload.accessToken;
       })
       .addCase(loginThunk.rejected, (state, action) => { state.loading = false; state.error = action.payload as string || 'Login failed'; })
-      .addCase(getMeThunk.fulfilled, (state, action) => { state.user = action.payload.user; })
+      .addCase(getMeThunk.fulfilled, (state, action) => { state.user = action.payload.user; state.isAuthenticated = true; })
       .addCase(getMeThunk.rejected, (state) => { authSlice.caseReducers.logout(state); });
   }
 });
