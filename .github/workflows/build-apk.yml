@@ -1,0 +1,46 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN || secrets.GIT }}
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./mobile
+
+      - name: Build APK locally on GitHub runner
+        run: npx eas build --platform android --profile preview --local --non-interactive
+        working-directory: ./mobile
+
+      - name: Upload APK to GitHub Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: AsianNewsBureau-APK
+          path: mobile/build-*.apk # EAS local puts the output apk in the working directory usually, or we can find it
+          
+      - name: Find and Upload any APK
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: AsianNewsBureau-APK-Fallback
+          path: mobile/**/*.apk
