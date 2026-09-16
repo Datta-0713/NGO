@@ -17,12 +17,8 @@ jobs:
           cache: 'npm'
           cache-dependency-path: mobile/package-lock.json
 
-      - name: Setup Expo
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN || secrets.GIT }}
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
 
       - name: Install dependencies
         run: npm ci
@@ -31,7 +27,9 @@ jobs:
       - name: Build APK locally on GitHub runner
         run: npx eas build --platform android --profile preview --local --non-interactive
         working-directory: ./mobile
-
+        env:
+          EXPO_TOKEN: ${{ secrets.GIT }}
+          
       - name: Upload APK to GitHub Artifacts
         uses: actions/upload-artifact@v4
         with:
