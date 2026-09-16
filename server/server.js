@@ -13,7 +13,10 @@ const scheduleWeeklyJob = require('./src/jobs/weeklyContributor');
 const scheduleMonthlyJob = require('./src/jobs/monthlyContributor');
 
 // 5. connectDB()
-connectDB();
+connectDB().then(() => {
+  const autoSeedAdmin = require('./src/utils/autoSeed');
+  autoSeedAdmin();
+});
 
 // Schedule Jobs
 scheduleWeeklyJob();
