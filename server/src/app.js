@@ -21,7 +21,12 @@ const creditRoutes = require('./routes/creditRoutes');
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: [CLIENT_URL], credentials: true }));
+app.use(cors({
+  origin: function (origin, callback) {
+    callback(null, true);
+  },
+  credentials: true
+}));
 if (NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
