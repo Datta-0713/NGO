@@ -5,7 +5,7 @@ import { CATEGORIES } from '@/constants';
 import { useDispatch, useSelector } from 'react-redux';
 import { createNews, fetchFeed } from '@/store/slices/newsSlice';
 import type { AppDispatch, RootState } from '@/store';
-import { Upload, X, Plus, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, X, Plus, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
 export const CreateNewsForm: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -18,6 +18,8 @@ export const CreateNewsForm: React.FC = () => {
   const [previews, setPreviews] = useState<string[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // uploading = files selected + form is being submitted (files are being sent to server/cloudinary)
+  const isUploading = submitting && files.length > 0;
   const [successMsg, setSuccessMsg] = useState('');
   const [localError, setLocalError] = useState('');
 
@@ -105,6 +107,16 @@ export const CreateNewsForm: React.FC = () => {
           <X size={16} />
         </button>
       </div>
+
+      {/* Upload in progress banner */}
+      {isUploading && (
+        <div className="flex items-center gap-3 p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
+          <Loader2 size={16} className="animate-spin flex-shrink-0" />
+          <span>
+            Uploading {files.length} file{files.length > 1 ? 's' : ''} to cloud storage — please wait, do not close this page.
+          </span>
+        </div>
+      )}
 
       {/* Error message */}
       {localError && (
@@ -208,11 +220,21 @@ export const CreateNewsForm: React.FC = () => {
       </div>
 
       <div className="flex justify-end gap-3 pt-2">
-        <Button type="button" variant="secondary" onClick={() => { setExpanded(false); resetForm(); }}>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => { setExpanded(false); resetForm(); }}
+          disabled={submitting}
+        >
           Cancel
         </Button>
-        <Button type="submit" loading={submitting}>
-          Publish News
+        <Button
+          type="submit"
+          loading={submitting}
+          disabled={submitting}
+          title={isUploading ? 'Please wait — files are uploading to cloud storage' : undefined}
+        >
+          {isUploading ? 'Uploading media…' : 'Publish News'}
         </Button>
       </div>
     </form>
