@@ -23,7 +23,7 @@ export const deleteNews = (id: string) =>
   api.delete(`/news/${id}`).then(res => res.data);
 
 export const getComments = (id: string) =>
-  api.get(`/news/${id}/comments`).then(res => res.data.comments);
+  api.get(`/news/${id}/comments`).then(res => res.data.data.comments || []);
 
 export const deleteComment = (newsId: string, commentId: string) =>
   api.delete(`/news/${newsId}/comments/${commentId}`).then(res => res.data);
