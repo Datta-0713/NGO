@@ -13,8 +13,6 @@ const {
   rejectSubmission 
 } = require('../controllers/submissionController');
 const { adminAdjustCredits } = require('../controllers/creditController');
-const { updateStatusValidation } = require('../validators/newsValidators');
-const validate = require('../middlewares/validate');
 const { protect, requireAdmin } = require('../middlewares/auth');
 
 const router = express.Router();
@@ -23,7 +21,7 @@ router.get('/dashboard/stats', protect, requireAdmin, getDashboardStats);
 router.get('/submissions', protect, requireAdmin, getAdminSubmissionsQueue);
 router.get('/submissions/:id', protect, requireAdmin, getSubmissionById);
 router.patch('/submissions/:id/approve', protect, requireAdmin, approveSubmission);
-router.patch('/submissions/:id/reject', protect, requireAdmin, updateStatusValidation, validate, rejectSubmission);
+router.patch('/submissions/:id/reject', protect, requireAdmin, rejectSubmission);
 router.get('/users', protect, requireAdmin, getAllUsers);
 router.get('/users/:id', protect, requireAdmin, getUserById);
 router.patch('/credits/adjust', protect, requireAdmin, adminAdjustCredits);

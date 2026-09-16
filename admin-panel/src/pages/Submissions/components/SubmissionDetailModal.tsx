@@ -28,14 +28,12 @@ export const SubmissionDetailModal: React.FC<Props> = ({ submission, onClose }) 
   const [commentsLoading, setCommentsLoading] = useState(false);
 
   useEffect(() => {
-    if (submission.status === 'published') {
-      setCommentsLoading(true);
-      getComments(submission._id)
-        .then(setComments)
-        .catch(console.error)
-        .finally(() => setCommentsLoading(false));
-    }
-  }, [submission._id, submission.status]);
+    setCommentsLoading(true);
+    getComments(submission._id)
+      .then(setComments)
+      .catch(console.error)
+      .finally(() => setCommentsLoading(false));
+  }, [submission._id]);
 
   const handleDeleteComment = async (commentId: string) => {
     if (!window.confirm('Are you sure you want to delete this comment?')) return;
@@ -178,44 +176,42 @@ export const SubmissionDetailModal: React.FC<Props> = ({ submission, onClose }) 
         </div>
       )}
 
-      {/* Comments Section (Only for published items) */}
-      {submission.status === 'published' && (
-        <div className="border-t border-gray-100 pt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <MessageCircle size={18} className="text-gray-500" />
-            <h4 className="font-bold text-gray-900">Comments</h4>
-            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs font-semibold">{comments.length}</span>
-          </div>
-
-          {commentsLoading ? (
-            <p className="text-sm text-gray-500 py-4 text-center">Loading comments...</p>
-          ) : comments.length === 0 ? (
-            <p className="text-sm text-gray-500 py-4 text-center bg-gray-50 rounded-xl">No comments yet</p>
-          ) : (
-            <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-2">
-              {comments.map((c: any) => (
-                <div key={c._id} className="flex gap-3 p-3 bg-gray-50 rounded-xl group relative">
-                  <Avatar src={c.user?.profilePhoto} name={c.user?.name || 'User'} size={32} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-semibold text-gray-900">{c.user?.name || 'Unknown User'}</span>
-                      <span className="text-xs text-gray-500">{safeFormat(c.createdAt, 'MMM d, HH:mm')}</span>
-                    </div>
-                    <p className="text-sm text-gray-700">{c.text}</p>
-                  </div>
-                  <button 
-                    onClick={() => handleDeleteComment(c._id)}
-                    className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg opacity-0 group-hover:opacity-100 shadow-sm transition-opacity hover:bg-red-50"
-                    title="Delete Comment"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+      {/* Comments Section */}
+      <div className="border-t border-gray-100 pt-6">
+        <div className="flex items-center gap-2 mb-4">
+          <MessageCircle size={18} className="text-gray-500" />
+          <h4 className="font-bold text-gray-900">Comments</h4>
+          <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs font-semibold">{comments.length}</span>
         </div>
-      )}
+
+        {commentsLoading ? (
+          <p className="text-sm text-gray-500 py-4 text-center">Loading comments...</p>
+        ) : comments.length === 0 ? (
+          <p className="text-sm text-gray-500 py-4 text-center bg-gray-50 rounded-xl">No comments yet</p>
+        ) : (
+          <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-2">
+            {comments.map((c: any) => (
+              <div key={c._id} className="flex gap-3 p-3 bg-gray-50 rounded-xl group relative">
+                <Avatar src={c.user?.profilePhoto} name={c.user?.name || 'User'} size={32} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-gray-900">{c.user?.name || 'Unknown User'}</span>
+                    <span className="text-xs text-gray-500">{safeFormat(c.createdAt, 'MMM d, HH:mm')}</span>
+                  </div>
+                  <p className="text-sm text-gray-700">{c.text}</p>
+                </div>
+                <button 
+                  onClick={() => handleDeleteComment(c._id)}
+                  className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg opacity-0 group-hover:opacity-100 shadow-sm transition-opacity hover:bg-red-50"
+                  title="Delete Comment"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </Modal>
   );
 };
