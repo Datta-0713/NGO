@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-server:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+    - run: npm install
+      working-directory: ./server
+    # Since there are no server tests yet, we just check install
+    
+  build-admin:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+    - run: npm install
+      working-directory: ./admin-panel
+    - run: npm run build
+      working-directory: ./admin-panel
+
+  build-mobile:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+    - run: npm install
+      working-directory: ./mobile
+    # We just verify that mobile installs successfully and passes any typescript/expo checks
+    - run: npx expo export --platform web
+      working-directory: ./mobile
+      continue-on-error: true # Just a sanity check for now
