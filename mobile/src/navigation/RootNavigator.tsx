@@ -27,8 +27,17 @@ export const RootNavigator = () => {
     );
   }
 
+  const linking = {
+    prefixes: ['asiannewsbureau://'],
+    config: {
+      screens: {
+        ResetPassword: 'reset-password/:token',
+      },
+    },
+  };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       {isAuthenticated ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );
