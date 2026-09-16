@@ -1,5 +1,12 @@
-import React from 'react';
-import { View, TextInput, Text, StyleSheet, TextInputProps } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  TextInput,
+  Text,
+  StyleSheet,
+  TextInputProps,
+  TouchableOpacity,
+} from 'react-native';
 import { Colors } from '../../constants/colors';
 import { Theme } from '../../constants/theme';
 
@@ -16,23 +23,40 @@ export const Input: React.FC<InputProps> = ({
   leftIcon,
   rightIcon,
   style,
+  secureTextEntry,
   ...props
 }) => {
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const isPassword = secureTextEntry === true;
+
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[
-        styles.inputContainer, 
-        error ? styles.inputError : null,
-        props.multiline && styles.multilineContainer
-      ]}>
+      <View
+        style={[
+          styles.inputContainer,
+          error ? styles.inputError : null,
+          props.multiline && styles.multilineContainer,
+        ]}
+      >
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
         <TextInput
           style={[styles.input, props.multiline && styles.multilineInput, style]}
           placeholderTextColor={Colors.textMuted}
+          secureTextEntry={isPassword && !isPasswordVisible}
           {...props}
         />
-        {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
+        {isPassword ? (
+          <TouchableOpacity
+            onPress={() => setIsPasswordVisible((v) => !v)}
+            style={styles.eyeButton}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.eyeText}>{isPasswordVisible ? '🙈' : '👁️'}</Text>
+          </TouchableOpacity>
+        ) : (
+          rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>
+        )}
       </View>
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
@@ -69,6 +93,14 @@ const styles = StyleSheet.create({
   },
   rightIcon: {
     paddingRight: Theme.spacing.md,
+  },
+  eyeButton: {
+    paddingHorizontal: Theme.spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eyeText: {
+    fontSize: 16,
   },
   input: {
     flex: 1,
