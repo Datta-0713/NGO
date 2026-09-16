@@ -1,0 +1,7 @@
+android/
+ios/
+.expo/
+node_modules/
+*.orig.*
+web-build/
+.env
