@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { Coins, TrendingUp, Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Coins, TrendingUp, Plus, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { creditsApi } from '@/api/creditsApi';
-
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Pagination } from '@/components/ui/Pagination';
+import { safeFormat } from '@/utils/date';
+import { usePagination } from '@/hooks/usePagination';
 
 const CreditsPage: React.FC = () => {
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
@@ -13,7 +16,31 @@ const CreditsPage: React.FC = () => {
   const [adjustSuccess, setAdjustSuccess] = useState(false);
   const [adjustError, setAdjustError] = useState('');
 
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [stats, setStats] = useState({ totalAwarded: 0, totalDeducted: 0 });
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const { page, limit, goToPage } = usePagination({ initialLimit: 15 });
 
+  const fetchTransactions = async () => {
+    setLoading(true);
+    try {
+      const data = await creditsApi.getAllTransactions(page, limit);
+      setTransactions(data.transactions || []);
+      setTotal(data.total || 0);
+      if (data.stats) {
+        setStats(data.stats);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [page, limit]);
   const handleAdjust = async () => {
     if (!adjustForm.userId || !adjustForm.amount || !adjustForm.reason) {
       setAdjustError('All fields are required.');
@@ -25,6 +52,7 @@ const CreditsPage: React.FC = () => {
       await creditsApi.adjustCredits(adjustForm.userId, Number(adjustForm.amount), adjustForm.reason);
       setAdjustSuccess(true);
       setAdjustForm({ userId: '', amount: '', reason: '' });
+      fetchTransactions();
       setTimeout(() => { setAdjustModalOpen(false); setAdjustSuccess(false); }, 1500);
     } catch (e: any) {
       setAdjustError(e?.response?.data?.message || 'Failed to adjust credits. Check the User ID is correct.');
@@ -42,9 +70,9 @@ const CreditsPage: React.FC = () => {
 
       <div className="grid grid-cols-3 gap-4">
         {[
-          { icon: Coins, label: 'Total Awarded', value: '—', color: 'text-primary bg-primary-xlight' },
-          { icon: TrendingUp, label: 'This Month', value: '—', color: 'text-green-600 bg-green-50' },
-          { icon: Coins, label: 'Pending Approval', value: '—', color: 'text-yellow-600 bg-yellow-50' },
+          { icon: TrendingUp, label: 'Total Awarded', value: stats.totalAwarded.toString(), color: 'text-green-600 bg-green-50' },
+          { icon: TrendingDown, label: 'Total Deducted', value: stats.totalDeducted.toString(), color: 'text-red-600 bg-red-50' },
+          { icon: Coins, label: 'Net Circulation', value: (stats.totalAwarded - stats.totalDeducted).toString(), color: 'text-primary bg-primary-xlight' },
         ].map(({ icon: Icon, label, value, color }) => (
           <div key={label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
             <div className={`p-3 rounded-xl ${color}`}><Icon size={22} /></div>
@@ -60,11 +88,62 @@ const CreditsPage: React.FC = () => {
         <div className="px-6 py-4 border-b border-gray-100">
           <h3 className="font-semibold text-gray-900">Recent Transactions</h3>
         </div>
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Coins size={40} className="text-gray-200 mb-4" />
-          <p className="text-muted">Transaction history will appear here</p>
-          <p className="text-sm text-muted mt-1">Credits are automatically logged when stories are approved</p>
-        </div>
+        {loading ? (
+          <div className="py-20"><LoadingSpinner size="lg" /></div>
+        ) : transactions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Coins size={40} className="text-gray-200 mb-4" />
+            <p className="text-muted">No transactions found</p>
+            <p className="text-sm text-muted mt-1">Credits are automatically logged when stories are approved</p>
+          </div>
+        ) : (
+          <>
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  {['Date', 'User', 'Type', 'Amount', 'Reason'].map(h => (
+                    <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wide">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {transactions.map((tx: any) => (
+                  <tr key={tx._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm text-muted whitespace-nowrap">
+                      {safeFormat(tx.createdAt, 'MMM d, yyyy HH:mm')}
+                    </td>
+                    <td className="px-6 py-4">
+                      {tx.user ? (
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-gray-900">{tx.user.name}</span>
+                          <span className="text-xs text-muted">{tx.user.email}</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted">Unknown User</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium capitalize ${
+                        tx.type === 'credit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {tx.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                      {tx.type === 'credit' ? '+' : '-'}{tx.amount}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600 max-w-md truncate">
+                      {tx.reason} {tx.relatedNews ? `(News: ${tx.relatedNews.title})` : ''}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="px-6 py-4 border-t border-gray-100">
+              <Pagination page={page} totalPages={Math.ceil(total / limit)} onPageChange={goToPage} />
+            </div>
+          </>
+        )}
       </div>
 
       <Modal

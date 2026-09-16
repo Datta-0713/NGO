@@ -59,7 +59,10 @@ export const getMeThunk = createAsyncThunk(
     try {
       return await authApi.getMe();
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || 'Failed to get user');
+      return rejectWithValue({
+        message: err.response?.data?.message || 'Failed to get user',
+        status: err.response?.status,
+      });
     }
   }
 );
@@ -84,11 +87,14 @@ export const initializeAuth = createAsyncThunk(
       dispatch(authSlice.actions.setTokens({ accessToken, refreshToken }));
       try {
         await dispatch(getMeThunk()).unwrap();
-      } catch (err) {
-        // Token expired/invalid, clear it
-        await SecureStore.deleteItemAsync('accessToken');
-        await SecureStore.deleteItemAsync('refreshToken');
-        dispatch(authSlice.actions.logout());
+      } catch (err: any) {
+        // Only clear tokens if we specifically got a 401 Unauthorized
+        if (err?.status === 401) {
+          await SecureStore.deleteItemAsync('accessToken');
+          await SecureStore.deleteItemAsync('refreshToken');
+          dispatch(authSlice.actions.logout());
+        }
+        // Otherwise (network error, server starting), keep them logged in
       }
     }
   }

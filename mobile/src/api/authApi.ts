@@ -28,9 +28,7 @@ export const authApi = {
 
   /** PATCH /api/users/me — update name/bio/location/photo */
   updateProfile: async (formData: FormData) => {
-    const response = await api.patch<ApiResponse<{ user: User }>>('/users/me', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const response = await api.patch<ApiResponse<{ user: User }>>('/users/me', formData);
     return response.data; // slice reads .data.user
   },
 };

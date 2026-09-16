@@ -31,7 +31,7 @@ export const LoginScreen = () => {
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
-            <Text style={styles.logoText}>NEXY</Text>
+            <Text style={styles.logoText}>Asian News Bureau</Text>
             <Text style={styles.logoSubtext}>Foundation</Text>
             <Text style={styles.heading}>Welcome Back</Text>
             <Text style={styles.subheading}>Log in to share your community stories</Text>
@@ -59,6 +59,16 @@ export const LoginScreen = () => {
               onChangeText={setPassword}
               secureTextEntry
             />
+            
+            <View style={styles.forgotPasswordContainer}>
+              <Text 
+                style={styles.forgotPasswordText}
+                onPress={() => navigation.navigate('ForgotPassword')}
+              >
+                Forgot Password?
+              </Text>
+            </View>
+
 
             <Button
               title="Log In"
@@ -134,6 +144,15 @@ const styles = StyleSheet.create({
   },
   form: {
     width: '100%',
+  },
+  forgotPasswordContainer: {
+    alignItems: 'flex-end',
+    marginBottom: Theme.spacing.lg,
+  },
+  forgotPasswordText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
   },
   submitButton: {
     marginTop: Theme.spacing.md,

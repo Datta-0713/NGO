@@ -12,17 +12,19 @@ import { Users, Search } from 'lucide-react';
 import { safeFormat } from '@/utils/date';
 import type { User } from '@/types';
 import { usePagination } from '@/hooks/usePagination';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const UsersPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { items: users, total, loading } = useSelector((state: RootState) => state.users);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 500);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { page, limit, goToPage } = usePagination({ initialLimit: 20 });
 
   useEffect(() => {
-    dispatch(fetchUsers({ page, limit, search }));
-  }, [dispatch, page, limit, search]);
+    dispatch(fetchUsers({ page, limit, search: debouncedSearch || undefined }));
+  }, [dispatch, page, limit, debouncedSearch]);
 
   const totalPages = Math.ceil(total / limit);
 

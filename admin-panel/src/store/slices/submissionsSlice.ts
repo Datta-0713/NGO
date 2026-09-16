@@ -90,6 +90,10 @@ const submissionsSlice = createSlice({
         }
         state.selectedSubmission = null;
       })
+      })
+      .addCase(approveSubmission.rejected, (state, action) => {
+        state.error = action.payload as string;
+      })
       .addCase(rejectSubmission.fulfilled, (state, action) => {
         const updated = action.payload?.news;
         if (updated) {
@@ -97,6 +101,9 @@ const submissionsSlice = createSlice({
           if (idx !== -1) state.items[idx] = updated;
         }
         state.selectedSubmission = null;
+      })
+      .addCase(rejectSubmission.rejected, (state, action) => {
+        state.error = action.payload as string;
       });
   },
 });

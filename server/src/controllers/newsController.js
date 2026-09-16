@@ -124,7 +124,7 @@ const deleteComment = asyncHandler(async (req, res) => {
 
   const comment = news.comments.id(req.params.commentId);
   if (!comment) throw new AppError('Comment not found', 404);
-  if (comment.user.toString() !== req.user._id.toString()) {
+  if (comment.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
     throw new AppError('Not authorised to delete this comment', 403);
   }
 

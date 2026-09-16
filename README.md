@@ -1,4 +1,4 @@
-# NEXY Foundation — Community News Platform
+# Asian News Bureau — Community News Platform
 
 A production-grade MERN monorepo for an NGO community news platform. Two clients share one backend:
 
@@ -206,4 +206,4 @@ Results are stored in `ContributorHighlight`. The next time a user opens the app
 
 ## License
 
-Private — NEXY Foundation internal use.
+Private — Asian News Bureau internal use.

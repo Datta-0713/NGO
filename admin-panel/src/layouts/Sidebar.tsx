@@ -15,7 +15,12 @@ const NAV_ITEMS = [
   { icon: Settings,        label: 'Settings',     path: '/settings',     end: false },
 ];
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
@@ -25,14 +30,26 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-60 bg-white border-r border-gray-100 flex flex-col z-40 shadow-sm">
+    <>
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-gray-900/50 z-40 md:hidden" 
+          onClick={onClose}
+        />
+      )}
+
+      {/* Sidebar container */}
+      <aside className={`fixed left-0 top-0 h-screen w-60 bg-white border-r border-gray-100 flex flex-col z-50 shadow-sm transition-transform duration-300 ease-in-out ${
+        isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      }`}>
       {/* Brand */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-100">
         <div className="bg-green-50 p-2 rounded-xl flex-shrink-0">
           <Leaf size={20} className="text-primary" />
         </div>
         <div className="min-w-0">
-          <p className="font-bold text-gray-900 text-sm leading-tight">NEXY Foundation</p>
+          <p className="font-bold text-gray-900 text-sm leading-tight">Asian News Bureau</p>
           <p className="text-xs text-muted">Admin Panel</p>
         </div>
       </div>
@@ -44,6 +61,7 @@ export const Sidebar: React.FC = () => {
             key={path}
             to={path}
             end={end}
+            onClick={() => { if (window.innerWidth < 768) onClose(); }}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                 isActive
@@ -70,5 +88,6 @@ export const Sidebar: React.FC = () => {
         <p className="text-xs text-center text-muted mt-3 opacity-60">Empowering communities</p>
       </div>
     </aside>
+    </>
   );
 };

@@ -13,7 +13,9 @@ const userSchema = new mongoose.Schema({
   credits: { type: Number, default: 0, min: 0 },
   storiesCount: { type: Number, default: 0 },
   likesReceived: { type: Number, default: 0 },
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date
 }, {
   timestamps: true,
   toJSON: {

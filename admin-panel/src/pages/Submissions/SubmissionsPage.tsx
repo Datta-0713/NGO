@@ -10,6 +10,7 @@ import { SubmissionCard } from './components/SubmissionCard';
 import { SubmissionDetailModal } from './components/SubmissionDetailModal';
 import { CheckSquare, Search } from 'lucide-react';
 import { usePagination } from '@/hooks/usePagination';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const STATUS_TABS = [
   { label: 'All',       value: '' },
@@ -23,11 +24,12 @@ const SubmissionsPage: React.FC = () => {
   const { items, total, loading, selectedSubmission } = useSelector((state: RootState) => state.submissions);
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 500);
   const { page, limit, goToPage } = usePagination({ initialLimit: 15 });
 
   useEffect(() => {
-    dispatch(fetchSubmissions({ page, limit, status: statusFilter || undefined, search: search || undefined }));
-  }, [dispatch, page, limit, statusFilter, search]);
+    dispatch(fetchSubmissions({ page, limit, status: statusFilter || undefined, search: debouncedSearch || undefined }));
+  }, [dispatch, page, limit, statusFilter, debouncedSearch]);
 
   const totalPages = Math.ceil(total / limit);
 

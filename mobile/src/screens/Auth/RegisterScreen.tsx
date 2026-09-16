@@ -46,7 +46,7 @@ export const RegisterScreen = () => {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
             <Text style={styles.heading}>Create Account</Text>
-            <Text style={styles.subheading}>Join NEXY Foundation community</Text>
+            <Text style={styles.subheading}>Join Asian News Bureau community</Text>
           </View>
 
           {displayError ? (

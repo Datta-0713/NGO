@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "NEXY Foundation",
-    "slug": "nexy-foundation",
+    "name": "Asian News Bureau",
+    "slug": "asian-news-bureau",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -23,7 +23,7 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
-      "package": "com.dipanjan13.nexyfoundation"
+      "package": "com.dipanjan13.asiannewsbureau"
     },
     "web": {},
     "plugins": [

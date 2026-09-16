@@ -15,7 +15,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  title = 'NEXY Foundation',
+  title = 'Asian News Bureau',
   subtitle,
   showBack = false,
   showLogo = false,

@@ -33,7 +33,7 @@ const LoginPage: React.FC = () => {
               <Leaf size={32} className="text-primary" />
             </div>
             <div className="text-center">
-              <h1 className="text-2xl font-bold text-gray-900">NEXY Foundation</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Asian News Bureau</h1>
               <p className="text-sm text-muted mt-1">Admin Panel</p>
             </div>
           </div>
@@ -50,7 +50,7 @@ const LoginPage: React.FC = () => {
             <Input
               label="Email address"
               type="email"
-              placeholder="admin@nexyfoundation.org"
+              placeholder="admin@asiannewsbureau.org"
               icon={<Mail size={16} />}
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -73,7 +73,7 @@ const LoginPage: React.FC = () => {
           </form>
 
           <p className="text-xs text-muted text-center mt-6">
-            This panel is restricted to NEXY Foundation staff only.
+            This panel is restricted to Asian News Bureau staff only.
           </p>
         </div>
       </div>

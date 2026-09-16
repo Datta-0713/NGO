@@ -57,6 +57,35 @@ const getCreditHistory = async (userId, page = 1, limit = 20) => {
   return { transactions, total, page, totalPages: Math.ceil(total / limit) };
 };
 
+const getAllCreditHistory = async (page = 1, limit = 20) => {
+  const skip = (page - 1) * limit;
+  const transactions = await CreditTransaction.find({})
+    .populate('user', 'name email profilePhoto')
+    .populate('relatedNews', 'title')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const total = await CreditTransaction.countDocuments({});
+  
+  // Aggregate stats
+  const statsResult = await CreditTransaction.aggregate([
+    {
+      $group: {
+        _id: "$type",
+        total: { $sum: "$amount" }
+      }
+    }
+  ]);
+  
+  const stats = {
+    totalAwarded: statsResult.find(s => s._id === 'credit')?.total || 0,
+    totalDeducted: statsResult.find(s => s._id === 'debit')?.total || 0,
+  };
+
+  return { transactions, total, page, totalPages: Math.ceil(total / limit), stats };
+};
+
 const awardWelcomeBonus = async (userId) => {
   return await awardCredits(userId, WELCOME_BONUS_CREDITS, 'welcome_bonus');
 };
@@ -65,5 +94,6 @@ module.exports = {
   awardCredits,
   deductCredits,
   getCreditHistory,
+  getAllCreditHistory,
   awardWelcomeBonus
 };

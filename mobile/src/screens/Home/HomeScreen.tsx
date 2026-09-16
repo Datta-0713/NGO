@@ -91,7 +91,7 @@ export const HomeScreen = () => {
   return (
     <View style={styles.container}>
       <Header
-        title="NEXY Foundation"
+        title="Asian News Bureau"
         subtitle="Building stronger communities together"
         showLogo={true}
         rightIcon={<BellIcon />}

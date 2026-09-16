@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Share, Alert } from 'react-native';
+import { Video, ResizeMode } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { Avatar } from '../common/Avatar';
@@ -28,13 +29,45 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
   const likesCount = item.likes?.length ?? 0;
   const author = item.submittedBy;
 
+  const handleOptions = () => {
+    Alert.alert(
+      'Options',
+      '',
+      [
+        {
+          text: 'Share',
+          onPress: async () => {
+            try {
+              await Share.share({
+                message: `Check out this news: ${item.title}\nRead more on Asian News Bureau!`,
+              });
+            } catch (error) {
+              console.log(error);
+            }
+          }
+        },
+        {
+          text: 'Report',
+          onPress: () => {
+            Alert.alert('Reported', 'Thank you for reporting. Our admins will review this.');
+          },
+          style: 'destructive'
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        }
+      ]
+    );
+  };
+
   return (
     <View style={styles.card}>
       {/* Author header */}
       <View style={styles.header}>
-        <Avatar url={author?.profilePhoto || ''} name={author?.name || 'NEXY'} size={40} />
+        <Avatar url={author?.profilePhoto || ''} name={author?.name || 'Asian News Bureau'} size={40} />
         <View style={styles.headerMid}>
-          <Text style={styles.authorName}>{author?.name || 'NEXY Foundation'}</Text>
+          <Text style={styles.authorName}>{author?.name || 'Asian News Bureau'}</Text>
           <View style={styles.metaRow}>
             <Ionicons name="location-outline" size={12} color="#9CA3AF" />
             <Text style={styles.locationTime} numberOfLines={1}>
@@ -42,7 +75,9 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
             </Text>
           </View>
         </View>
-        <Ionicons name="ellipsis-vertical" size={18} color="#9CA3AF" />
+        <TouchableOpacity onPress={handleOptions} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="ellipsis-vertical" size={18} color="#9CA3AF" />
+        </TouchableOpacity>
       </View>
 
       {/* Content */}
@@ -50,11 +85,21 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
         <Text style={styles.title}>{item.title}</Text>
         <Text style={styles.description} numberOfLines={3}>{item.description}</Text>
         {firstMedia?.url && (
-          <Image
-            source={{ uri: firstMedia.url }}
-            style={styles.media}
-            resizeMode="cover"
-          />
+          firstMedia.type === 'video' ? (
+            <Video
+              source={{ uri: firstMedia.url }}
+              style={styles.media}
+              useNativeControls
+              resizeMode={ResizeMode.COVER}
+              isLooping
+            />
+          ) : (
+            <Image
+              source={{ uri: firstMedia.url }}
+              style={styles.media}
+              resizeMode="cover"
+            />
+          )
         )}
       </TouchableOpacity>
 

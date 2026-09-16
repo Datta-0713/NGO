@@ -7,17 +7,14 @@ const CATEGORIES = ['Community', 'Education', 'Environment', 'Health', 'Events']
 
 const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState({
-    ngoName: 'NEXY Foundation',
+    ngoName: 'Asian News Bureau',
     tagline: 'Building stronger communities together',
     creditPerApproval: '10',
     welcomeBonus: '5',
   });
-  const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
-    // In prod this would call a settings API
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    // Disabled as per audit requirements
   };
 
   return (
@@ -52,9 +49,10 @@ const SettingsPage: React.FC = () => {
         <p className="text-xs text-muted">Categories are configured in the server environment. Contact your developer to add or remove categories.</p>
       </div>
 
-      <div className="flex justify-end">
-        <Button icon={<Save size={16} />} onClick={handleSave}>
-          {saved ? '✓ Saved!' : 'Save Settings'}
+      <div className="flex justify-end items-center gap-4">
+        <p className="text-sm text-yellow-600 font-medium">Settings API coming soon</p>
+        <Button icon={<Save size={16} />} onClick={handleSave} disabled>
+          Save Settings
         </Button>
       </div>
     </div>

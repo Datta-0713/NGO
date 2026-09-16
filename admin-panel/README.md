@@ -1,4 +1,4 @@
-# NEXY Foundation Admin Panel
+# Asian News Bureau Admin Panel
 
 React + Vite + TypeScript admin panel.
 

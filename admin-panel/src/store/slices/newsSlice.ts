@@ -90,6 +90,9 @@ const newsSlice = createSlice({
       .addCase(deleteNews.fulfilled, (state, action) => {
         state.items = state.items.filter(item => item._id !== action.payload);
         state.total = Math.max(0, state.total - 1);
+      })
+      .addCase(deleteNews.rejected, (state, action) => {
+        state.error = action.payload as string;
       });
   },
 });

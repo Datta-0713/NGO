@@ -5,6 +5,7 @@ import {
   FlatList, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Video, ResizeMode } from 'expo-av';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
@@ -156,7 +157,17 @@ export const NewsDetailScreen = () => {
         <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Hero image */}
           {news.media?.[0]?.url && (
-            <Image source={{ uri: news.media[0].url }} style={styles.heroImage} resizeMode="cover" />
+            news.media[0].type === 'video' ? (
+              <Video
+                source={{ uri: news.media[0].url }}
+                style={styles.heroImage}
+                useNativeControls
+                resizeMode={ResizeMode.COVER}
+                isLooping
+              />
+            ) : (
+              <Image source={{ uri: news.media[0].url }} style={styles.heroImage} resizeMode="cover" />
+            )
           )}
 
           <View style={styles.content}>
@@ -182,9 +193,9 @@ export const NewsDetailScreen = () => {
 
             {/* Author */}
             <View style={styles.authorSection}>
-              <Avatar url={author?.profilePhoto} name={author?.name || 'NEXY Team'} size={44} />
+              <Avatar url={author?.profilePhoto} name={author?.name || 'Asian News Bureau'} size={44} />
               <View style={styles.authorInfo}>
-                <Text style={styles.authorName}>{author?.name || 'NEXY Foundation'}</Text>
+                <Text style={styles.authorName}>{author?.name || 'Asian News Bureau'}</Text>
                 <View style={styles.contributorBadge}>
                   <Ionicons name="shield-checkmark" size={11} color={Colors.accent} />
                   <Text style={styles.contributorText}>Contributor · {author?.credits ?? 0} credits</Text>
@@ -199,7 +210,17 @@ export const NewsDetailScreen = () => {
             {news.media && news.media.length > 1 && (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.extraMedia}>
                 {news.media.slice(1).map((m, i) => (
-                  <Image key={i} source={{ uri: m.url }} style={styles.extraImage} resizeMode="cover" />
+                  m.type === 'video' ? (
+                    <Video
+                      key={i}
+                      source={{ uri: m.url }}
+                      style={styles.extraImage}
+                      useNativeControls
+                      resizeMode={ResizeMode.COVER}
+                    />
+                  ) : (
+                    <Image key={i} source={{ uri: m.url }} style={styles.extraImage} resizeMode="cover" />
+                  )
                 ))}
               </ScrollView>
             )}

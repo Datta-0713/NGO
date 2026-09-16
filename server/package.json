@@ -1,7 +1,7 @@
 {
   "name": "ngo-server",
   "version": "1.0.0",
-  "description": "NEXY Foundation Community News API",
+  "description": "Asian News Bureau API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -23,10 +23,11 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "multer-storage-cloudinary": "^4.0.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "nodemailer": "^10.0.10"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
-    "eslint": "^8.57.0"
+    "eslint": "^8.57.0",
+    "nodemon": "^3.0.2"
   }
 }

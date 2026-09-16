@@ -6,6 +6,7 @@ import { RegisterScreen } from '../screens/Auth/RegisterScreen';
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -15,6 +16,7 @@ export const AuthStack = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="ForgotPassword" component={require('../screens/Auth/ForgotPasswordScreen').ForgotPasswordScreen} />
     </Stack.Navigator>
   );
 };
