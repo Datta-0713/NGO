@@ -2,7 +2,7 @@
 /**
  * scripts/seedAdmin.js
  *
- * Creates the first admin user for the NEXY Foundation platform.
+ * Creates the first admin user for the Asian News Bureau platform.
  * Run once after initial setup:
  *   node scripts/seedAdmin.js
  *
@@ -23,7 +23,7 @@ const rl = readline.createInterface({ input: process.stdin, output: process.stdo
 const ask = (q) => new Promise((resolve) => rl.question(q, resolve));
 
 const run = async () => {
-  console.log('\n🌱  NEXY Foundation — Admin Seed Script\n');
+  console.log('\n🌱  Asian News Bureau — Admin Seed Script\n');
 
   await mongoose.connect(MONGO_URI);
   console.log('✅ Connected to MongoDB\n');

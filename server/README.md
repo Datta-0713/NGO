@@ -1,6 +1,6 @@
-# NEXY Foundation Community News API
+# Asian News Bureau Community News API
 
-This is the backend service for the NEXY Foundation Community News App. It provides a REST API to serve both a React Native mobile app and a React web admin panel.
+This is the backend service for the Asian News Bureau Community News App. It provides a REST API to serve both a React Native mobile app and a React web admin panel.
 
 ## Prerequisites
 

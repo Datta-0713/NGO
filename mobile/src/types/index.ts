@@ -1,5 +1,5 @@
 /**
- * Mobile app type definitions — aligned to the NEXY Foundation backend API response shapes.
+ * Mobile app type definitions — aligned to the Asian News Bureau backend API response shapes.
  * All fields match the Mongoose model output (after toJSON transform).
  */
 
