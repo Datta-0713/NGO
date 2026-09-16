@@ -15,7 +15,8 @@ const userSchema = new mongoose.Schema({
   likesReceived: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
   resetPasswordToken: String,
-  resetPasswordExpires: Date
+  resetPasswordExpires: Date,
+  pushToken: { type: String, default: '' }  // Expo push notification token
 }, {
   timestamps: true,
   toJSON: {

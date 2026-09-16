@@ -26,7 +26,12 @@ const newsSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
   }],
   views: { type: Number, default: 0 },
-  publishedAt: { type: Date }
+  publishedAt: { type: Date },
+  reports: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reason: { type: String, default: 'Inappropriate content' },
+    createdAt: { type: Date, default: Date.now }
+  }]
 }, {
   timestamps: true,
   toJSON: { virtuals: true },

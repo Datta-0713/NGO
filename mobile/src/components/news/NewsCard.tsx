@@ -10,6 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/AppStack';
 import { useAppSelector } from '../../hooks/useAppSelector';
+import { api } from '../../api/axios';
 
 interface NewsCardProps {
   item: NewsItem;
@@ -29,6 +30,16 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
   const likesCount = item.likes?.length ?? 0;
   const author = item.submittedBy;
 
+  const handleReport = async () => {
+    try {
+      await api.post(`/news/${item._id}/report`, { reason: 'Inappropriate content' });
+      Alert.alert('Reported', 'Thank you. Our admins will review this story shortly.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to report. Please try again.';
+      Alert.alert('Notice', msg);
+    }
+  };
+
   const handleOptions = () => {
     Alert.alert(
       'Options',
@@ -47,9 +58,16 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
           }
         },
         {
-          text: 'Report',
+          text: 'Report Story',
           onPress: () => {
-            Alert.alert('Reported', 'Thank you for reporting. Our admins will review this.');
+            Alert.alert(
+              'Report Story',
+              'Are you sure you want to report this story as inappropriate?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Report', style: 'destructive', onPress: handleReport },
+              ]
+            );
           },
           style: 'destructive'
         },
