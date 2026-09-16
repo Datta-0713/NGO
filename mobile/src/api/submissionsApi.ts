@@ -9,11 +9,12 @@ interface SubmissionsPaginatedResponse {
 }
 
 export const submissionsApi = {
-  /** POST /api/submissions — submit a news story with media */
+  /** POST /api/submissions — submit a news story with optional media
+   *  NOTE: Do NOT set Content-Type manually. Axios auto-generates
+   *  the correct 'multipart/form-data; boundary=XXX' header for FormData.
+   */
   submitNews: async (formData: FormData) => {
-    const response = await api.post<ApiResponse<{ news: NewsItem }>>('/submissions', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const response = await api.post<ApiResponse<{ news: NewsItem }>>('/submissions', formData);
     return response.data;
   },
 

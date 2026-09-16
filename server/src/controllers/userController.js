@@ -13,8 +13,8 @@ const updateProfile = asyncHandler(async (req, res) => {
   if (bio) req.user.bio = bio;
   if (location) req.user.location = location;
   
-  if (req.file) {
-    req.user.profilePhoto = req.file.path;
+  if (req.uploadedPhotoUrl) {
+    req.user.profilePhoto = req.uploadedPhotoUrl;
   }
   
   await req.user.save();
