@@ -24,6 +24,7 @@ export const fetchFeed = createAsyncThunk(
   'news/fetch',
   async (params: { page?: number; limit?: number; category?: string; search?: string }, { rejectWithValue }) => {
     try {
+      // API returns full ApiResponse: { success, data: { news, total, page, totalPages }, message }
       return await api.getFeed(params);
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load news');
@@ -64,9 +65,10 @@ const newsSlice = createSlice({
       .addCase(fetchFeed.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(fetchFeed.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = action.payload.data ?? [];
-        state.total = action.payload.total ?? 0;
-        state.page = action.payload.page ?? 1;
+        // action.payload = ApiResponse → .data = { news: NewsItem[], total, page, totalPages }
+        state.items = action.payload?.data?.news ?? [];
+        state.total = action.payload?.data?.total ?? 0;
+        state.page  = action.payload?.data?.page  ?? 1;
       })
       .addCase(fetchFeed.rejected, (state, action) => {
         state.loading = false;
@@ -76,7 +78,7 @@ const newsSlice = createSlice({
       .addCase(createNews.pending, (state) => { state.submitting = true; })
       .addCase(createNews.fulfilled, (state, action) => {
         state.submitting = false;
-        // Prepend to list if published
+        // action.payload = ApiResponse → .data.news = created NewsItem
         const created = action.payload?.data?.news as NewsItem;
         if (created) state.items = [created, ...state.items];
       })

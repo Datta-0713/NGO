@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { useAppSelector } from '../../hooks/useAppSelector';
-import { registerThunk } from '../../store/slices/authSlice';
+import { registerThunk, clearError } from '../../store/slices/authSlice';
 import { Colors } from '../../constants/colors';
 import { Theme } from '../../constants/theme';
 import { Input } from '../../components/common/Input';
@@ -31,6 +31,7 @@ export const RegisterScreen = () => {
       setValidationError('Passwords do not match');
       return;
     }
+    dispatch(clearError());
     dispatch(registerThunk({ name, email, password }));
   };
 

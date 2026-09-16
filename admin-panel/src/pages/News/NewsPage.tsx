@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Pagination } from '@/components/ui/Pagination';
 import { Modal } from '@/components/ui/Modal';
 import { Trash2, FileText, Eye } from 'lucide-react';
-import { format } from 'date-fns';
+import { safeFormat } from '@/utils/date';
 import { usePagination } from '@/hooks/usePagination';
 
 const NewsPage: React.FC = () => {
@@ -97,7 +97,7 @@ const NewsPage: React.FC = () => {
                     </td>
                     <td className="px-5 py-3"><Badge status={item.status} /></td>
                     <td className="px-5 py-3 text-sm text-muted whitespace-nowrap">
-                      {format(new Date(item.createdAt), 'MMM d, yyyy')}
+                      {safeFormat(item.createdAt, 'MMM d, yyyy')}
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-1 text-sm text-gray-600">

@@ -7,7 +7,7 @@ import { Header } from '../../components/common/Header';
 import { Avatar } from '../../components/common/Avatar';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { useAppSelector } from '../../hooks/useAppSelector';
-import { logout } from '../../store/slices/authSlice';
+import { logoutThunk } from '../../store/slices/authSlice';
 import { fetchCreditHistory } from '../../store/slices/profileSlice';
 import { format } from 'date-fns';
 import type { CreditTransaction } from '../../types';
@@ -24,7 +24,7 @@ export const ProfileScreen = () => {
   }, [dispatch]);
 
   const handleLogout = () => {
-    dispatch(logout());
+    dispatch(logoutThunk());
   };
 
   if (!user) return null;

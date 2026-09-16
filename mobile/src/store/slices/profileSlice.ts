@@ -44,7 +44,10 @@ const profileSlice = createSlice({
       })
       .addCase(fetchCreditHistory.fulfilled, (state, action) => {
         state.loading = false;
-        const { transactions, total, page, totalPages } = action.payload!;
+        const transactions = action.payload?.transactions ?? [];
+        const total = action.payload?.total ?? 0;
+        const page = action.payload?.page ?? 1;
+        const totalPages = action.payload?.totalPages ?? 1;
         if (page === 1) {
           state.creditHistory = transactions;
         } else {

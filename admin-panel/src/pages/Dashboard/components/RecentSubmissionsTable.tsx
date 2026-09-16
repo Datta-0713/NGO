@@ -1,5 +1,5 @@
 import React from 'react';
-import { format } from 'date-fns';
+import { safeFormat } from '@/utils/date';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import type { NewsItem } from '@/types';
@@ -58,7 +58,7 @@ export const RecentSubmissionsTable: React.FC<{ items: NewsItem[] }> = ({ items 
             </td>
             <td className="py-3 pr-4"><Badge status={item.status} /></td>
             <td className="py-3 text-xs text-muted whitespace-nowrap">
-              {format(new Date(item.createdAt), 'MMM d, yyyy')}
+              {safeFormat(item.createdAt, 'MMM d, yyyy')}
             </td>
           </tr>
         ))}

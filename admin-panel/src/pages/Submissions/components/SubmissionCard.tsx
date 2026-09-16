@@ -1,5 +1,5 @@
 import React from 'react';
-import { format } from 'date-fns';
+import { safeFormat } from '@/utils/date';
 import { MapPin, Calendar, Eye } from 'lucide-react';
 import type { NewsItem } from '@/types';
 import { Badge } from '@/components/ui/Badge';
@@ -33,7 +33,7 @@ export const SubmissionCard: React.FC<Props> = ({ item, onView }) => {
           <span className="flex items-center gap-1"><MapPin size={12} />{item.location}</span>
           <span className="flex items-center gap-1">
             <Calendar size={12} />
-            {format(new Date(item.createdAt), 'MMM d, yyyy')}
+            {safeFormat(item.createdAt, 'MMM d, yyyy')}
           </span>
           <span className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-500">{item.category}</span>
         </div>

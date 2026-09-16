@@ -85,7 +85,8 @@ export const SubmitNewsScreen = () => {
         { text: 'OK', onPress: () => navigation.navigate('MySubmissions') }
       ]);
     } catch (err: any) {
-      Alert.alert('Error', err || 'Failed to submit news');
+      const msg = typeof err === 'string' ? err : err?.message || 'Failed to submit news';
+      Alert.alert('Error', msg);
     }
   };
 

@@ -12,16 +12,26 @@ const initialState: AuthState = {
   error: null,
 };
 
-export const loginThunk = createAsyncThunk('auth/login', async (credentials: any) => {
-  const res = await authApi.login(credentials);
-  localStorage.setItem('accessToken', res.data.accessToken);
-  localStorage.setItem('refreshToken', res.data.refreshToken);
-  return res.data;
+export const loginThunk = createAsyncThunk('auth/login', async (credentials: any, { rejectWithValue }) => {
+  try {
+    const res = await authApi.login(credentials);
+    // res = ApiResponse: { success, data: { user, accessToken, refreshToken }, message }
+    localStorage.setItem('accessToken', res.data.accessToken);
+    localStorage.setItem('refreshToken', res.data.refreshToken);
+    return res.data;
+  } catch (err: any) {
+    return rejectWithValue(err.response?.data?.message || 'Login failed');
+  }
 });
 
-export const getMeThunk = createAsyncThunk('auth/getMe', async () => {
-  const res = await authApi.getMe();
-  return res.data;
+export const getMeThunk = createAsyncThunk('auth/getMe', async (_, { rejectWithValue }) => {
+  try {
+    const res = await authApi.getMe();
+    // res.data = { user: User }
+    return res.data as { user: User };
+  } catch (err: any) {
+    return rejectWithValue(err.response?.data?.message || 'Session expired');
+  }
 });
 
 const authSlice = createSlice({
@@ -45,8 +55,8 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.accessToken = action.payload.accessToken;
       })
-      .addCase(loginThunk.rejected, (state, action) => { state.loading = false; state.error = action.error.message || 'Login failed'; })
-      .addCase(getMeThunk.fulfilled, (state, action) => { state.user = action.payload; })
+      .addCase(loginThunk.rejected, (state, action) => { state.loading = false; state.error = action.payload as string || 'Login failed'; })
+      .addCase(getMeThunk.fulfilled, (state, action) => { state.user = action.payload.user; })
       .addCase(getMeThunk.rejected, (state) => { authSlice.caseReducers.logout(state); });
   }
 });

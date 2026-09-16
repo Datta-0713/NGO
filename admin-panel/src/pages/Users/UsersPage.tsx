@@ -9,7 +9,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { Input } from '@/components/ui/Input';
 import { UserDetailModal } from './components/UserDetailModal';
 import { Users, Search } from 'lucide-react';
-import { format } from 'date-fns';
+import { safeFormat } from '@/utils/date';
 import type { User } from '@/types';
 import { usePagination } from '@/hooks/usePagination';
 
@@ -79,7 +79,7 @@ const UsersPage: React.FC = () => {
                         {user.credits} pts
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-muted">{format(new Date(user.createdAt), 'MMM d, yyyy')}</td>
+                    <td className="px-4 py-3 text-sm text-muted">{safeFormat(user.createdAt, 'MMM d, yyyy')}</td>
                   </tr>
                 ))}
               </tbody>

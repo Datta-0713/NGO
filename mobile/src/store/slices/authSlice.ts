@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import * as SecureStore from 'expo-secure-store';
 import { authApi } from '../../api/authApi';
 import type { User } from '../../types';
 
@@ -24,7 +25,12 @@ export const loginThunk = createAsyncThunk(
   'auth/login',
   async (credentials: any, { rejectWithValue }) => {
     try {
-      return await authApi.login(credentials);
+      const res = await authApi.login(credentials);
+      if (res.data?.accessToken) {
+        await SecureStore.setItemAsync('accessToken', res.data.accessToken);
+        await SecureStore.setItemAsync('refreshToken', res.data.refreshToken);
+      }
+      return res;
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || 'Login failed');
     }
@@ -35,7 +41,12 @@ export const registerThunk = createAsyncThunk(
   'auth/register',
   async (userData: any, { rejectWithValue }) => {
     try {
-      return await authApi.register(userData);
+      const res = await authApi.register(userData);
+      if (res.data?.accessToken) {
+        await SecureStore.setItemAsync('accessToken', res.data.accessToken);
+        await SecureStore.setItemAsync('refreshToken', res.data.refreshToken);
+      }
+      return res;
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || 'Registration failed');
     }
@@ -64,6 +75,34 @@ export const updateProfileThunk = createAsyncThunk(
   }
 );
 
+export const initializeAuth = createAsyncThunk(
+  'auth/initialize',
+  async (_, { dispatch }) => {
+    const accessToken = await SecureStore.getItemAsync('accessToken');
+    const refreshToken = await SecureStore.getItemAsync('refreshToken');
+    if (accessToken && refreshToken) {
+      dispatch(authSlice.actions.setTokens({ accessToken, refreshToken }));
+      try {
+        await dispatch(getMeThunk()).unwrap();
+      } catch (err) {
+        // Token expired/invalid, clear it
+        await SecureStore.deleteItemAsync('accessToken');
+        await SecureStore.deleteItemAsync('refreshToken');
+        dispatch(authSlice.actions.logout());
+      }
+    }
+  }
+);
+
+export const logoutThunk = createAsyncThunk(
+  'auth/logout',
+  async (_, { dispatch }) => {
+    await SecureStore.deleteItemAsync('accessToken');
+    await SecureStore.deleteItemAsync('refreshToken');
+    dispatch(authSlice.actions.logout());
+  }
+);
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -79,6 +118,9 @@ const authSlice = createSlice({
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
       state.isAuthenticated = true;
+    },
+    clearError(state) {
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
@@ -115,6 +157,17 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+      // Initialize Auth
+      .addCase(initializeAuth.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(initializeAuth.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(initializeAuth.rejected, (state) => {
+        state.loading = false;
+      })
+
       // GetMe — response.data = ApiResponse, .data.user = User
       .addCase(getMeThunk.fulfilled, (state, action) => {
         state.user = action.payload.data.user;
@@ -139,5 +192,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, setTokens } = authSlice.actions;
+export const { logout, setTokens, clearError } = authSlice.actions;
 export default authSlice.reducer;

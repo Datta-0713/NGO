@@ -71,28 +71,34 @@ const feedSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
-      // Optimistic like toggle using server-returned likesCount
+      // Optimistically flip the liked state in UI immediately
       .addCase(toggleLike.pending, (state, action) => {
-        // Optimistically flip the like in UI immediately
         const item = state.items.find(i => i._id === action.meta.arg);
         if (item) {
-          const currentUserId = 'optimistic';
-          const isLiked = item.likes.includes(currentUserId);
-          if (isLiked) {
-            item.likes = item.likes.filter(id => id !== currentUserId);
+          // Use the array length as a proxy — we'll sync properly on fulfilled
+          // Just flip the count so UI feels instant
+          if (item.liked) {
+            item.liked = false;
+            item.likes = item.likes.filter((_, i) => i < item.likes.length - 1);
           } else {
-            item.likes = [...item.likes, currentUserId];
+            item.liked = true;
+            item.likes = [...(item.likes || []), 'optimistic_temp'];
           }
         }
       })
       .addCase(toggleLike.fulfilled, (state, action) => {
-        // Sync with confirmed server count
+        // Sync with confirmed server values — replace optimistic state
         const item = state.items.find(i => i._id === action.payload.id);
         if (item) {
-          // Trim or extend likes array to match server's confirmed count
+          item.liked = action.payload.liked;
+          // Build a clean likes array of the correct length using real count
           const confirmed = action.payload.likesCount;
-          if (item.likes.length > confirmed) {
-            item.likes = item.likes.slice(0, confirmed);
+          // Remove optimistic entry and set correct length
+          const filtered = (item.likes || []).filter(id => id !== 'optimistic_temp');
+          if (action.payload.liked) {
+            item.likes = [...filtered.slice(0, confirmed - 1), 'confirmed'];
+          } else {
+            item.likes = filtered.slice(0, confirmed);
           }
         }
       });
