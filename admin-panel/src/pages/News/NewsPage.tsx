@@ -12,12 +12,15 @@ import { Modal } from '@/components/ui/Modal';
 import { Trash2, FileText, Eye } from 'lucide-react';
 import { safeFormat } from '@/utils/date';
 import { usePagination } from '@/hooks/usePagination';
+import { SubmissionDetailModal } from '../Submissions/components/SubmissionDetailModal';
+import type { NewsItem } from '@/types';
 
 const NewsPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { items, total, loading } = useSelector((state: RootState) => state.news);
   const { page, limit, goToPage } = usePagination({ initialLimit: 20 });
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<NewsItem | null>(null);
 
   useEffect(() => {
     dispatch(fetchFeed({ page, limit }));
@@ -72,7 +75,11 @@ const NewsPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {items.map(item => (
-                  <tr key={item._id} className="hover:bg-gray-50 transition-colors">
+                  <tr 
+                    key={item._id} 
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => setSelectedItem(item)}
+                  >
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-xl bg-gray-100 flex-shrink-0 overflow-hidden">
@@ -107,7 +114,10 @@ const NewsPage: React.FC = () => {
                     </td>
                     <td className="px-5 py-3 text-right">
                       <button
-                        onClick={() => setDeleteId(item._id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteId(item._id);
+                        }}
                         className="p-2 rounded-lg hover:bg-red-50 text-muted hover:text-red-500 transition-colors"
                         title="Delete"
                       >
@@ -124,6 +134,14 @@ const NewsPage: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* Detail/Comments Modal */}
+      {selectedItem && (
+        <SubmissionDetailModal
+          submission={selectedItem}
+          onClose={() => setSelectedItem(null)}
+        />
+      )}
 
       {/* Delete confirmation */}
       <Modal
