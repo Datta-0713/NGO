@@ -11,7 +11,7 @@ export const getNewsById = (id: string) =>
 
 /** Admin: publish official news (multipart form data) */
 export const createNews = (data: FormData) =>
-  api.post('/news', data, { headers: { 'Content-Type': 'multipart/form-data' } }).then(res => res.data);
+  api.post('/news', data).then(res => res.data);
 
 /** Admin: delete a news article */
 export const deleteNews = (id: string) =>
