@@ -118,4 +118,45 @@ const resetPassword = asyncHandler(async (req, res) => {
   sendSuccess(res, 200, null, 'Password reset successful');
 });
 
-module.exports = { register, login, refreshToken, logout, getMe, forgotPassword, resetPassword };
+const googleLogin = asyncHandler(async (req, res) => {
+  const { idToken } = req.body;
+  if (!idToken) throw new AppError('Google ID token is required', 400);
+
+  const { OAuth2Client } = require('google-auth-library');
+  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || 'PLACEHOLDER_FOR_NOW');
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID || 'PLACEHOLDER_FOR_NOW',
+    });
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
+
+    let user = await User.findByEmail(email);
+    
+    if (!user) {
+      user = await User.create({
+        name,
+        email,
+        passwordHash: crypto.randomBytes(16).toString('hex'),
+        profilePhoto: picture,
+        isActive: true
+      });
+      // Award welcome bonus for new google users
+      user = await creditService.awardWelcomeBonus(user._id);
+    }
+
+    if (!user.isActive) {
+      throw new AppError('Account is deactivated', 401);
+    }
+
+    const { accessToken, refreshToken } = generateTokens(user._id);
+    sendSuccess(res, 200, { user: user.toJSON(), accessToken, refreshToken }, 'Login successful');
+  } catch (err) {
+    console.error('Google auth error:', err);
+    throw new AppError('Invalid Google token', 401);
+  }
+});
+
+module.exports = { register, login, refreshToken, logout, getMe, forgotPassword, resetPassword, googleLogin };
