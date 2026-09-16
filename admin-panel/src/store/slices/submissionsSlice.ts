@@ -90,7 +90,6 @@ const submissionsSlice = createSlice({
         }
         state.selectedSubmission = null;
       })
-      })
       .addCase(approveSubmission.rejected, (state, action) => {
         state.error = action.payload as string;
       })
