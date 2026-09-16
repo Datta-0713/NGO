@@ -19,6 +19,13 @@ export interface User {
   updatedAt: string;
 }
 
+export interface Comment {
+  _id: string;
+  user: { _id: string; name: string; profilePhoto: string };
+  text: string;
+  createdAt: string;
+}
+
 export interface MediaItem {
   url: string;
   type: 'image' | 'video';
@@ -39,6 +46,9 @@ export interface NewsItem {
   reviewedBy?: User | null;
   rejectionMessage?: string;
   likes: string[];           // array of User._id strings
+  liked?: boolean;            // computed by client optimistic state
+  comments?: Comment[];
+  commentsCount?: number;
   views: number;
   publishedAt?: string;
   createdAt: string;

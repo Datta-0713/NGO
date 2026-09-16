@@ -1,5 +1,6 @@
 'use strict';
 const News = require('../models/News');
+const User = require('../models/User');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendSuccess } = require('../utils/apiResponse');
@@ -62,14 +63,22 @@ const likeNews = asyncHandler(async (req, res) => {
   if (!news || news.status !== 'published') throw new AppError('News not found', 404);
 
   const userId = req.user._id;
-  const hasLiked = news.likes.includes(userId);
+  const hasLiked = news.likes.some(id => id.toString() === userId.toString());
 
   if (hasLiked) {
     news.likes.pull(userId);
+    // Decrement author's likesReceived
+    if (news.submittedBy) {
+      await User.findByIdAndUpdate(news.submittedBy, { $inc: { likesReceived: -1 } });
+    }
   } else {
     news.likes.push(userId);
+    // Increment author's likesReceived
+    if (news.submittedBy) {
+      await User.findByIdAndUpdate(news.submittedBy, { $inc: { likesReceived: 1 } });
+    }
   }
-  
+
   await news.save();
   sendSuccess(res, 200, { likesCount: news.likes.length, liked: !hasLiked });
 });
@@ -77,9 +86,51 @@ const likeNews = asyncHandler(async (req, res) => {
 const deleteNews = asyncHandler(async (req, res) => {
   const news = await News.findById(req.params.id);
   if (!news) throw new AppError('News not found', 404);
-
   await news.deleteOne();
   sendSuccess(res, 200, null, 'News deleted successfully');
 });
 
-module.exports = { getFeed, getNewsById, createAdminNews, likeNews, deleteNews };
+/** GET /api/news/:id/comments - get all comments for a news item */
+const getComments = asyncHandler(async (req, res) => {
+  const news = await News.findById(req.params.id)
+    .select('comments status')
+    .populate('comments.user', 'name profilePhoto');
+  if (!news) throw new AppError('News not found', 404);
+  sendSuccess(res, 200, { comments: news.comments, total: news.comments.length });
+});
+
+/** POST /api/news/:id/comments - add a comment (authenticated) */
+const addComment = asyncHandler(async (req, res) => {
+  const { text } = req.body;
+  if (!text || !text.trim()) throw new AppError('Comment text is required', 400);
+
+  const news = await News.findById(req.params.id);
+  if (!news || news.status !== 'published') throw new AppError('News not found', 404);
+
+  news.comments.push({ user: req.user._id, text: text.trim() });
+  await news.save();
+
+  // Populate just the newly added comment
+  await news.populate('comments.user', 'name profilePhoto');
+  const newComment = news.comments[news.comments.length - 1];
+
+  sendSuccess(res, 201, { comment: newComment, commentsCount: news.comments.length }, 'Comment added');
+});
+
+/** DELETE /api/news/:id/comments/:commentId - delete own comment */
+const deleteComment = asyncHandler(async (req, res) => {
+  const news = await News.findById(req.params.id);
+  if (!news) throw new AppError('News not found', 404);
+
+  const comment = news.comments.id(req.params.commentId);
+  if (!comment) throw new AppError('Comment not found', 404);
+  if (comment.user.toString() !== req.user._id.toString()) {
+    throw new AppError('Not authorised to delete this comment', 403);
+  }
+
+  comment.deleteOne();
+  await news.save();
+  sendSuccess(res, 200, { commentsCount: news.comments.length }, 'Comment deleted');
+});
+
+module.exports = { getFeed, getNewsById, createAdminNews, likeNews, deleteNews, getComments, addComment, deleteComment };

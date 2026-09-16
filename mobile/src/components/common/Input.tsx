@@ -7,8 +7,8 @@ import {
   TextInputProps,
   TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { Theme } from '../../constants/theme';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -32,27 +32,27 @@ export const Input: React.FC<InputProps> = ({
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View
-        style={[
-          styles.inputContainer,
-          error ? styles.inputError : null,
-          props.multiline && styles.multilineContainer,
-        ]}
-      >
+      <View style={[styles.inputContainer, error ? styles.inputError : null, props.multiline && styles.multilineContainer]}>
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
+
         <TextInput
           style={[styles.input, props.multiline && styles.multilineInput, style]}
-          placeholderTextColor={Colors.textMuted}
+          placeholderTextColor="#9CA3AF"
           secureTextEntry={isPassword && !isPasswordVisible}
           {...props}
         />
+
         {isPassword ? (
           <TouchableOpacity
-            onPress={() => setIsPasswordVisible((v) => !v)}
+            onPress={() => setIsPasswordVisible(v => !v)}
             style={styles.eyeButton}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.eyeText}>{isPasswordVisible ? '🙈' : '👁️'}</Text>
+            <Ionicons
+              name={isPasswordVisible ? 'eye' : 'eye-off'}
+              size={20}
+              color="#9CA3AF"
+            />
           </TouchableOpacity>
         ) : (
           rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>
@@ -64,60 +64,48 @@ export const Input: React.FC<InputProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: Theme.spacing.lg,
-  },
+  container: { marginBottom: 16 },
   label: {
-    fontSize: Theme.typography.size.sm,
-    fontWeight: Theme.typography.weight.medium,
-    color: Colors.textPrimary,
-    marginBottom: Theme.spacing.sm,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 6,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Theme.borderRadius.md,
-    backgroundColor: Colors.white,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    backgroundColor: '#fff',
     minHeight: 48,
   },
-  inputError: {
-    borderColor: Colors.error,
-  },
-  multilineContainer: {
-    alignItems: 'flex-start',
-  },
-  leftIcon: {
-    paddingLeft: Theme.spacing.md,
-  },
-  rightIcon: {
-    paddingRight: Theme.spacing.md,
-  },
+  inputError: { borderColor: Colors.error },
+  multilineContainer: { alignItems: 'flex-start' },
+  leftIcon: { paddingLeft: 14 },
+  rightIcon: { paddingRight: 14 },
   eyeButton: {
-    paddingHorizontal: Theme.spacing.md,
+    paddingHorizontal: 14,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  eyeText: {
-    fontSize: 16,
+    height: 48,
   },
   input: {
     flex: 1,
-    paddingHorizontal: Theme.spacing.md,
-    fontSize: Theme.typography.size.md,
-    color: Colors.textPrimary,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: '#1A1A2E',
     minHeight: 48,
   },
   multilineInput: {
     minHeight: 120,
-    paddingTop: Theme.spacing.md,
-    paddingBottom: Theme.spacing.md,
+    paddingTop: 14,
+    paddingBottom: 14,
     textAlignVertical: 'top',
   },
   errorText: {
-    fontSize: Theme.typography.size.xs,
+    fontSize: 12,
     color: Colors.error,
-    marginTop: Theme.spacing.xs,
+    marginTop: 4,
   },
 });

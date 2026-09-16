@@ -1,16 +1,65 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { Theme } from '../../constants/theme';
 import { Header } from '../../components/common/Header';
 import { StatusStepper } from '../../components/submissions/StatusStepper';
 import { EmptyState } from '../../components/common/EmptyState';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { fetchMySubmissions } from '../../store/slices/submissionsSlice';
-import { format } from 'date-fns';
+import { isValid, format } from 'date-fns';
 import type { NewsItem } from '../../types';
+
+const safeDate = (d: string) => {
+  const p = new Date(d);
+  return isValid(p) ? format(p, 'MMM d') : '';
+};
+
+const StatusBadge = ({ status }: { status: NewsItem['status'] }) => {
+  const map: Record<string, { label: string; color: string }> = {
+    published: { label: 'Published', color: Colors.success },
+    rejected:  { label: 'Rejected',  color: Colors.error   },
+    pending:   { label: 'Under Review', color: Colors.warning },
+  };
+  const s = map[status] ?? map.pending;
+  return (
+    <View style={[styles.badge, { backgroundColor: s.color }]}>
+      <Text style={styles.badgeText}>{s.label}</Text>
+    </View>
+  );
+};
+
+const FeedbackCard = ({ status, rejectionMessage }: { status: NewsItem['status']; rejectionMessage?: string }) => {
+  if (status === 'pending') {
+    return (
+      <View style={[styles.feedbackCard, { backgroundColor: '#F0FDF4' }]}>
+        <Ionicons name="time-outline" size={20} color={Colors.primary} style={{ marginRight: 10, marginTop: 1 }} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.feedbackTitle, { color: Colors.primary }]}>Thank you for contributing!</Text>
+          <Text style={[styles.feedbackText, { color: '#166534' }]}>
+            Our team is carefully reviewing your submission to ensure it meets community guidelines.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+  if (status === 'rejected') {
+    return (
+      <View style={[styles.feedbackCard, { backgroundColor: '#FEF2F2' }]}>
+        <Ionicons name="information-circle-outline" size={20} color={Colors.error} style={{ marginRight: 10, marginTop: 1 }} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.feedbackTitle, { color: Colors.error }]}>Almost there!</Text>
+          <Text style={[styles.feedbackText, { color: '#991B1B' }]}>
+            {rejectionMessage || 'Your story needs a small tweak before it can be published.'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+  return null;
+};
 
 export const MySubmissionsScreen = () => {
   const dispatch = useAppDispatch();
@@ -20,108 +69,52 @@ export const MySubmissionsScreen = () => {
     dispatch(fetchMySubmissions({ page: 1, limit: 20 }));
   }, [dispatch]);
 
-  const getStatusBadge = (status: NewsItem['status']) => {
-    let bgColor: string = Colors.pending;
-    let label = 'Pending Review';
-
-    if (status === 'published') {
-      bgColor = Colors.published;
-      label = 'Published';
-    } else if (status === 'rejected') {
-      bgColor = Colors.rejected;
-      label = 'Rejected';
-    }
-
-    return (
-      <View style={[styles.badge, { backgroundColor: bgColor }]}>
-        <Text style={styles.badgeText}>{label}</Text>
-      </View>
-    );
-  };
-
-  const renderFeedbackMessage = (status: NewsItem['status'], rejectionReason?: string) => {
-    if (status === 'pending') {
-      return (
-        <View style={styles.feedbackCard}>
-          <Text style={styles.feedbackIcon}>🛡️</Text>
-          <View style={styles.feedbackContent}>
-            <Text style={styles.feedbackTitle}>Thank you for contributing!</Text>
-            <Text style={styles.feedbackText}>
-              Our NGO team is carefully reviewing your submission to ensure it meets community guidelines.
-            </Text>
-          </View>
-        </View>
-      );
-    }
-    if (status === 'rejected') {
-      return (
-        <View style={[styles.feedbackCard, styles.feedbackCardError]}>
-          <Text style={styles.feedbackIcon}>⚠️</Text>
-          <View style={styles.feedbackContent}>
-            <Text style={styles.feedbackTitleError}>Almost there!</Text>
-            <Text style={styles.feedbackTextError}>
-              {rejectionReason || 'Your story needs a small tweak before it can be published.'}
-            </Text>
-          </View>
-        </View>
-      );
-    }
-    return null;
-  };
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Header 
-        showBack 
-        title="My Submissions" 
-        subtitle="Track the status of news you've submitted" 
-      />
-      
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <Header showBack title="My Submissions" subtitle="Track the status of your stories" />
+
       <FlatList
         data={mySubmissions}
         keyExtractor={item => item._id}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           !loading ? (
-            <EmptyState 
-              title="No submissions yet" 
+            <EmptyState
+              title="No submissions yet"
               description="Share your first story with the community!"
-              emoji="📝"
+              emoji=""
             />
           ) : null
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
+            {/* Header row */}
             <View style={styles.cardHeader}>
               {item.media?.[0]?.url ? (
                 <Image source={{ uri: item.media[0].url }} style={styles.thumbnail} />
               ) : (
-                <View style={[styles.thumbnail, styles.thumbnailPlaceholder]} />
+                <View style={[styles.thumbnail, styles.thumbnailPlaceholder]}>
+                  <Ionicons name="image-outline" size={24} color="#D1D5DB" />
+                </View>
               )}
               <View style={styles.headerInfo}>
                 <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
-                <Text style={styles.meta}>
-                  📍 {item.location} • {format(new Date(item.createdAt), 'MMM d')}
-                </Text>
+                <View style={styles.metaRow}>
+                  <Ionicons name="location-outline" size={12} color="#9CA3AF" />
+                  <Text style={styles.meta}>  {item.location}  ·  {safeDate(item.createdAt)}</Text>
+                </View>
               </View>
-              {getStatusBadge(item.status)}
+              <StatusBadge status={item.status} />
             </View>
-            
-            <Text style={styles.description} numberOfLines={2}>
-              {item.description}
-            </Text>
+
+            <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
 
             <View style={styles.divider} />
-            
+
             <Text style={styles.sectionTitle}>Submission Status</Text>
             <StatusStepper status={item.status} />
-            
-            {renderFeedbackMessage(item.status, item.rejectionMessage)}
 
-            <View style={styles.helpRow}>
-              <Text style={styles.helpText}>Have questions?</Text>
-              <Text style={styles.helpArrow}>→</Text>
-            </View>
+            <FeedbackCard status={item.status} rejectionMessage={item.rejectionMessage} />
           </View>
         )}
       />
@@ -130,129 +123,26 @@ export const MySubmissionsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.backgroundGray,
-  },
-  listContent: {
-    padding: Theme.spacing.md,
-  },
+  safeArea: { flex: 1, backgroundColor: '#F8F9FA' },
+  listContent: { padding: 16, paddingBottom: 40 },
   card: {
-    backgroundColor: Colors.white,
-    borderRadius: Theme.borderRadius.lg,
-    padding: Theme.spacing.lg,
-    marginBottom: Theme.spacing.lg,
-    ...Theme.shadows.sm,
+    backgroundColor: '#fff', borderRadius: 14, padding: 16,
+    marginBottom: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    marginBottom: Theme.spacing.md,
-  },
-  thumbnail: {
-    width: 60,
-    height: 60,
-    borderRadius: Theme.borderRadius.md,
-    marginRight: Theme.spacing.md,
-  },
-  thumbnailPlaceholder: {
-    backgroundColor: Colors.backgroundGray,
-  },
-  headerInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: Theme.typography.size.md,
-    fontWeight: Theme.typography.weight.bold,
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  meta: {
-    fontSize: Theme.typography.size.xs,
-    color: Colors.textMuted,
-  },
-  badge: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: Theme.borderRadius.full,
-  },
-  badgeText: {
-    color: Colors.white,
-    fontSize: 10,
-    fontWeight: Theme.typography.weight.bold,
-  },
-  description: {
-    fontSize: Theme.typography.size.sm,
-    color: Colors.textSecondary,
-    marginBottom: Theme.spacing.md,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.borderLight,
-    marginVertical: Theme.spacing.md,
-  },
-  sectionTitle: {
-    fontSize: Theme.typography.size.sm,
-    fontWeight: Theme.typography.weight.bold,
-    color: Colors.textPrimary,
-    marginBottom: Theme.spacing.md,
-  },
-  feedbackCard: {
-    flexDirection: 'row',
-    backgroundColor: Colors.primaryXLight,
-    padding: Theme.spacing.md,
-    borderRadius: Theme.borderRadius.md,
-    marginTop: Theme.spacing.md,
-  },
-  feedbackCardError: {
-    backgroundColor: Colors.error + '10',
-  },
-  feedbackIcon: {
-    fontSize: 24,
-    marginRight: Theme.spacing.sm,
-  },
-  feedbackContent: {
-    flex: 1,
-  },
-  feedbackTitle: {
-    fontSize: Theme.typography.size.sm,
-    fontWeight: Theme.typography.weight.bold,
-    color: Colors.primary,
-    marginBottom: 4,
-  },
-  feedbackTitleError: {
-    fontSize: Theme.typography.size.sm,
-    fontWeight: Theme.typography.weight.bold,
-    color: Colors.error,
-    marginBottom: 4,
-  },
-  feedbackText: {
-    fontSize: Theme.typography.size.xs,
-    color: Colors.primary,
-    opacity: 0.9,
-  },
-  feedbackTextError: {
-    fontSize: Theme.typography.size.xs,
-    color: Colors.error,
-  },
-  helpRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: Theme.spacing.lg,
-    paddingTop: Theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-  },
-  helpText: {
-    fontSize: Theme.typography.size.sm,
-    color: Colors.textSecondary,
-  },
-  helpArrow: {
-    fontSize: 16,
-    color: Colors.textMuted,
-  },
+  cardHeader: { flexDirection: 'row', marginBottom: 12, gap: 12 },
+  thumbnail: { width: 64, height: 64, borderRadius: 10, flexShrink: 0 },
+  thumbnailPlaceholder: { backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
+  headerInfo: { flex: 1, justifyContent: 'center' },
+  title: { fontSize: 14, fontWeight: '700', color: '#1A1A2E', marginBottom: 5 },
+  metaRow: { flexDirection: 'row', alignItems: 'center' },
+  meta: { fontSize: 12, color: '#9CA3AF' },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, alignSelf: 'flex-start', flexShrink: 0 },
+  badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  description: { fontSize: 13, color: '#6B7280', marginBottom: 12, lineHeight: 18 },
+  divider: { height: 1, backgroundColor: '#F3F4F6', marginBottom: 12 },
+  sectionTitle: { fontSize: 13, fontWeight: '700', color: '#374151', marginBottom: 4 },
+  feedbackCard: { flexDirection: 'row', padding: 12, borderRadius: 10, marginTop: 12 },
+  feedbackTitle: { fontSize: 13, fontWeight: '700', marginBottom: 3 },
+  feedbackText: { fontSize: 12, lineHeight: 17 },
 });

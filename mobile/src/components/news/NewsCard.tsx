@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { Theme } from '../../constants/theme';
 import { Avatar } from '../common/Avatar';
 import type { NewsItem } from '../../types';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isValid } from 'date-fns';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/AppStack';
@@ -19,49 +19,40 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const currentUserId = useAppSelector(state => state.auth.user?._id || '');
 
-  const timeAgo = formatDistanceToNow(new Date(item.createdAt), { addSuffix: true });
+  const dateObj = item.createdAt ? new Date(item.createdAt) : null;
+  const timeAgo = dateObj && isValid(dateObj)
+    ? formatDistanceToNow(dateObj, { addSuffix: true })
+    : '';
   const firstMedia = item.media?.[0];
-  const isLiked = item.likes?.includes(currentUserId) ?? false;
+  const isLiked = item.liked ?? (item.likes?.includes(currentUserId) ?? false);
   const likesCount = item.likes?.length ?? 0;
   const author = item.submittedBy;
-
-  const handlePress = () => {
-    navigation.navigate('NewsDetail', { id: item._id });
-  };
 
   return (
     <View style={styles.card}>
       {/* Author header */}
       <View style={styles.header}>
-        <View style={styles.authorInfo}>
-          <Avatar
-            url={author?.profilePhoto || ''}
-            name={author?.name || 'NGO Team'}
-            size={40}
-          />
-          <View style={styles.authorText}>
-            <Text style={styles.authorName}>{author?.name || 'NEXY Foundation'}</Text>
-            <Text style={styles.locationTime}>
-              📍 {item.location} • {timeAgo}
+        <Avatar url={author?.profilePhoto || ''} name={author?.name || 'NEXY'} size={40} />
+        <View style={styles.headerMid}>
+          <Text style={styles.authorName}>{author?.name || 'NEXY Foundation'}</Text>
+          <View style={styles.metaRow}>
+            <Ionicons name="location-outline" size={12} color="#9CA3AF" />
+            <Text style={styles.locationTime} numberOfLines={1}>
+              {' '}{item.location}  ·  {timeAgo}
             </Text>
           </View>
         </View>
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>{item.category}</Text>
-        </View>
+        <Ionicons name="ellipsis-vertical" size={18} color="#9CA3AF" />
       </View>
 
       {/* Content */}
-      <TouchableOpacity activeOpacity={0.8} onPress={handlePress}>
+      <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('NewsDetail', { id: item._id })}>
         <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.description} numberOfLines={2}>
-          {item.description}
-        </Text>
-
+        <Text style={styles.description} numberOfLines={3}>{item.description}</Text>
         {firstMedia?.url && (
           <Image
             source={{ uri: firstMedia.url }}
-            style={[styles.media, firstMedia.type === 'video' && styles.videoMedia]}
+            style={styles.media}
             resizeMode="cover"
           />
         )}
@@ -69,15 +60,21 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.likeButton} onPress={onLike}>
-          <Text style={styles.likeIcon}>{isLiked ? '❤️' : '🤍'}</Text>
-          <Text style={[styles.likeCount, isLiked && styles.likedText]}>
-            {likesCount}
-          </Text>
+        <TouchableOpacity style={styles.likeButton} onPress={onLike} activeOpacity={0.7}>
+          <Ionicons
+            name={isLiked ? 'heart' : 'heart-outline'}
+            size={22}
+            color={isLiked ? Colors.heartRed : '#9CA3AF'}
+          />
+          <Text style={[styles.likeCount, isLiked && styles.likedText]}>{likesCount}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={handlePress} style={styles.viewMoreBtn}>
-          <Text style={styles.viewMore}>Read more →</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('NewsDetail', { id: item._id })}
+          style={styles.viewMoreBtn}
+        >
+          <Text style={styles.viewMore}>View more</Text>
+          <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
         </TouchableOpacity>
       </View>
     </View>
@@ -86,103 +83,86 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.white,
-    borderRadius: Theme.borderRadius.lg,
-    padding: Theme.spacing.lg,
-    marginBottom: Theme.spacing.lg,
-    ...Theme.shadows.sm,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Theme.spacing.md,
+    marginBottom: 12,
+    gap: 10,
   },
-  authorInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  authorText: {
-    marginLeft: Theme.spacing.md,
+  headerMid: {
     flex: 1,
   },
   authorName: {
-    fontSize: Theme.typography.size.md,
-    fontWeight: Theme.typography.weight.semibold,
-    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A2E',
+    marginBottom: 2,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   locationTime: {
-    fontSize: Theme.typography.size.xs,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  categoryBadge: {
-    backgroundColor: Colors.primaryXLight,
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: 3,
-    borderRadius: Theme.borderRadius.full,
-    marginLeft: Theme.spacing.sm,
-  },
-  categoryText: {
-    fontSize: Theme.typography.size.xs,
-    fontWeight: Theme.typography.weight.semibold,
-    color: Colors.primary,
+    fontSize: 12,
+    color: '#9CA3AF',
+    flex: 1,
   },
   title: {
-    fontSize: Theme.typography.size.lg,
-    fontWeight: Theme.typography.weight.bold,
-    color: Colors.textPrimary,
-    marginBottom: Theme.spacing.xs,
-    lineHeight: 24,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A2E',
+    marginBottom: 6,
+    lineHeight: 22,
   },
   description: {
-    fontSize: Theme.typography.size.md,
-    color: Colors.textSecondary,
-    marginBottom: Theme.spacing.md,
+    fontSize: 14,
+    color: '#4B5563',
+    marginBottom: 12,
     lineHeight: 20,
   },
   media: {
     width: '100%',
     height: 200,
-    borderRadius: Theme.borderRadius.md,
-    marginBottom: Theme.spacing.md,
-  },
-  videoMedia: {
-    height: 180,
+    borderRadius: 10,
+    marginBottom: 12,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: Theme.spacing.xs,
-    paddingTop: Theme.spacing.sm,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
+    borderTopColor: '#F3F4F6',
   },
   likeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Theme.spacing.xs,
-  },
-  likeIcon: {
-    fontSize: 20,
-    marginRight: Theme.spacing.xs,
+    gap: 6,
   },
   likeCount: {
-    fontSize: Theme.typography.size.md,
-    color: Colors.textMuted,
-    fontWeight: Theme.typography.weight.medium,
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
   },
-  likedText: {
-    color: Colors.heartRed,
-  },
+  likedText: { color: Colors.heartRed },
   viewMoreBtn: {
-    padding: Theme.spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   viewMore: {
-    fontSize: Theme.typography.size.sm,
+    fontSize: 13,
     color: Colors.primary,
-    fontWeight: Theme.typography.weight.semibold,
+    fontWeight: '600',
   },
 });

@@ -1,30 +1,32 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { Theme } from '../../constants/theme';
 import type { Notification } from '../../types';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isValid } from 'date-fns';
 
 interface NotificationItemProps {
   notification: Notification;
   onPress: () => void;
 }
 
-/** Maps backend notification types to display emoji icons */
-const getNotificationIcon = (type: Notification['type']): string => {
+type IoniconName = keyof typeof Ionicons.glyphMap;
+
+const getIcon = (type: Notification['type']): { name: IoniconName; color: string; bg: string } => {
   switch (type) {
-    case 'news_approved':     return '✅';
-    case 'news_rejected':     return '❌';
-    case 'credit_received':   return '💰';
-    case 'news_liked':        return '❤️';
-    case 'top_contributor':   return '🏆';
-    case 'system':
-    default:                  return '🔔';
+    case 'news_approved':   return { name: 'checkmark-circle', color: '#22C55E', bg: '#F0FDF4' };
+    case 'news_rejected':   return { name: 'close-circle',     color: '#EF4444', bg: '#FEF2F2' };
+    case 'credit_received': return { name: 'wallet',           color: '#F59E0B', bg: '#FFFBEB' };
+    case 'news_liked':      return { name: 'heart',            color: '#FF4B4B', bg: '#FFF5F5' };
+    case 'top_contributor': return { name: 'trophy',           color: '#8B5CF6', bg: '#F5F3FF' };
+    default:                return { name: 'notifications',    color: Colors.primary, bg: Colors.primaryXLight };
   }
 };
 
 export const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onPress }) => {
-  const timeAgo = formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true });
+  const dateObj = new Date(notification.createdAt);
+  const timeAgo = isValid(dateObj) ? formatDistanceToNow(dateObj, { addSuffix: true }) : '';
+  const icon = getIcon(notification.type);
 
   return (
     <TouchableOpacity
@@ -32,17 +34,15 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={styles.iconContainer}>
-        <Text style={styles.icon}>{getNotificationIcon(notification.type)}</Text>
+      <View style={[styles.iconContainer, { backgroundColor: icon.bg }]}>
+        <Ionicons name={icon.name} size={22} color={icon.color} />
       </View>
 
       <View style={styles.content}>
-        <Text style={[styles.title, !notification.read && styles.unreadText]}>
+        <Text style={[styles.title, !notification.read && styles.unreadText]} numberOfLines={1}>
           {notification.title}
         </Text>
-        <Text style={styles.message} numberOfLines={2}>
-          {notification.message}
-        </Text>
+        <Text style={styles.message} numberOfLines={2}>{notification.message}</Text>
         <Text style={styles.time}>{timeAgo}</Text>
       </View>
 
@@ -54,53 +54,29 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    padding: Theme.spacing.lg,
-    backgroundColor: Colors.white,
+    padding: 16,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    borderBottomColor: '#F9FAFB',
+    alignItems: 'center',
+    gap: 12,
   },
-  unreadContainer: {
-    backgroundColor: Colors.primaryXLight,
-  },
+  unreadContainer: { backgroundColor: '#F0FDF4' },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.backgroundGray,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Theme.spacing.md,
+    flexShrink: 0,
   },
-  icon: {
-    fontSize: 22,
-  },
-  content: {
-    flex: 1,
-  },
-  title: {
-    fontSize: Theme.typography.size.md,
-    fontWeight: Theme.typography.weight.medium,
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  unreadText: {
-    fontWeight: Theme.typography.weight.bold,
-  },
-  message: {
-    fontSize: Theme.typography.size.sm,
-    color: Colors.textSecondary,
-    marginBottom: 4,
-    lineHeight: 20,
-  },
-  time: {
-    fontSize: Theme.typography.size.xs,
-    color: Colors.textLight,
-  },
+  content: { flex: 1 },
+  title: { fontSize: 14, fontWeight: '500', color: '#1A1A2E', marginBottom: 3 },
+  unreadText: { fontWeight: '700' },
+  message: { fontSize: 13, color: '#4B5563', lineHeight: 18, marginBottom: 4 },
+  time: { fontSize: 11, color: '#9CA3AF' },
   unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary,
-    marginTop: Theme.spacing.md,
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: Colors.primary, flexShrink: 0,
   },
 });

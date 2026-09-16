@@ -1,49 +1,57 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { Theme } from '../../constants/theme';
 import { useNavigation } from '@react-navigation/native';
 
 interface HeaderProps {
   title?: string;
+  subtitle?: string;
   showBack?: boolean;
+  showLogo?: boolean;
   rightIcon?: React.ReactNode;
   onRightPress?: () => void;
-  subtitle?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ 
-  title = 'NEXY Foundation', 
-  showBack = false, 
-  rightIcon, 
+export const Header: React.FC<HeaderProps> = ({
+  title = 'NEXY Foundation',
+  subtitle,
+  showBack = false,
+  showLogo = false,
+  rightIcon,
   onRightPress,
-  subtitle 
 }) => {
   const navigation = useNavigation();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={styles.container}>
+        {/* Left: back button or logo+title */}
         {showBack ? (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-            <Text style={styles.iconText}>←</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
         ) : (
-          <View style={styles.iconPlaceholder} />
+          <View style={styles.brandRow}>
+            {showLogo && (
+              <View style={styles.logoContainer}>
+                <Ionicons name="leaf" size={22} color={Colors.primary} />
+              </View>
+            )}
+            <View>
+              <Text style={styles.title}>{title}</Text>
+              {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+            </View>
+          </View>
         )}
 
-        <View style={styles.centerContainer}>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
-        </View>
-
+        {/* Right icon */}
         {rightIcon ? (
-          <TouchableOpacity onPress={onRightPress} style={styles.iconButton}>
+          <TouchableOpacity onPress={onRightPress} style={styles.rightButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             {rightIcon}
           </TouchableOpacity>
-        ) : (
-          <View style={styles.iconPlaceholder} />
-        )}
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -51,43 +59,53 @@ export const Header: React.FC<HeaderProps> = ({
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: Colors.white,
+    backgroundColor: '#fff',
   },
   container: {
-    height: 56,
+    height: 60,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Theme.spacing.lg,
-    backgroundColor: Colors.white,
+    paddingHorizontal: 16,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    borderBottomColor: '#F3F4F6',
   },
-  centerContainer: {
-    flex: 1,
+  brandRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+  },
+  logoContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#D8F3DC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
   },
   title: {
-    fontSize: Theme.typography.size.lg,
-    fontWeight: Theme.typography.weight.bold,
+    fontSize: 18,
+    fontWeight: '700',
     color: Colors.primary,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: Theme.typography.size.xs,
-    color: Colors.textMuted,
-    marginTop: 2,
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 1,
   },
-  iconButton: {
+  backButton: {
+    marginRight: 8,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+  },
+  rightButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  iconText: {
-    fontSize: 24,
-    color: Colors.textPrimary,
-  },
-  iconPlaceholder: {
-    width: 40,
   },
 });

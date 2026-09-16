@@ -27,4 +27,24 @@ export const feedApi = {
     const response = await api.patch<ApiResponse<{ likesCount: number; liked: boolean }>>(`/news/${id}/like`);
     return response.data.data;
   },
+
+  /** GET /api/news/:id/comments */
+  getComments: async (newsId: string) => {
+    const response = await api.get<ApiResponse<{ comments: import('../types').Comment[]; total: number }>>(`/news/${newsId}/comments`);
+    return response.data.data;
+  },
+
+  /** POST /api/news/:id/comments */
+  addComment: async (newsId: string, text: string) => {
+    const response = await api.post<ApiResponse<{ comment: import('../types').Comment; commentsCount: number }>>(
+      `/news/${newsId}/comments`, { text }
+    );
+    return response.data.data;
+  },
+
+  /** DELETE /api/news/:id/comments/:commentId */
+  deleteComment: async (newsId: string, commentId: string) => {
+    const response = await api.delete<ApiResponse<{ commentsCount: number }>>(`/news/${newsId}/comments/${commentId}`);
+    return response.data.data;
+  },
 };

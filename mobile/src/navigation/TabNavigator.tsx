@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { HomeScreen } from '../screens/Home/HomeScreen';
 import { SearchScreen } from '../screens/Search/SearchScreen';
 import { UpdatesScreen } from '../screens/Updates/UpdatesScreen';
@@ -22,15 +23,14 @@ const Tab = createBottomTabNavigator<TabParamList>();
 
 const CustomTabBarButton = () => {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  
   return (
     <TouchableOpacity
       style={styles.fabContainer}
       onPress={() => navigation.navigate('SubmitNews')}
-      activeOpacity={0.8}
+      activeOpacity={0.85}
     >
       <View style={styles.fab}>
-        <Text style={styles.fabIcon}>+</Text>
+        <Ionicons name="add" size={30} color="#fff" />
       </View>
     </TouchableOpacity>
   );
@@ -41,67 +41,71 @@ export const TabNavigator = () => {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarShowLabel: false,
         tabBarStyle: styles.tabBar,
-        tabBarIcon: ({ focused, color }) => {
-          let icon = '';
-          if (route.name === 'Home') icon = focused ? '🏠' : '🏠';
-          else if (route.name === 'Search') icon = '🔍';
-          else if (route.name === 'Updates') icon = focused ? '🔔' : '🔔';
-          else if (route.name === 'Profile') icon = '👤';
-          return <Text style={{ fontSize: 24, opacity: focused ? 1 : 0.5 }}>{icon}</Text>;
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap = 'home';
+          if (route.name === 'Home')    iconName = focused ? 'home'          : 'home-outline';
+          if (route.name === 'Search')  iconName = focused ? 'search'        : 'search-outline';
+          if (route.name === 'Updates') iconName = focused ? 'notifications' : 'notifications-outline';
+          if (route.name === 'Profile') iconName = focused ? 'person'        : 'person-outline';
+          return <Ionicons name={iconName} size={22} color={color} />;
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Search" component={SearchScreen} />
-      <Tab.Screen 
-        name="AddPlaceholder" 
-        component={View} 
+      <Tab.Screen name="Home"    component={HomeScreen}    options={{ title: 'Home' }} />
+      <Tab.Screen name="Search"  component={SearchScreen}  options={{ title: 'Search' }} />
+      <Tab.Screen
+        name="AddPlaceholder"
+        component={View}
         options={{
+          title: '',
           tabBarButton: () => <CustomTabBarButton />,
         }}
       />
-      <Tab.Screen name="Updates" component={UpdatesScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Updates" component={UpdatesScreen} options={{ title: 'Updates' }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
 };
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: Colors.tabBar,
+    backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    height: 60,
-    elevation: 8,
+    borderTopColor: '#F3F4F6',
+    height: 64,
+    paddingBottom: 8,
+    paddingTop: 6,
+    elevation: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+  },
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 2,
   },
   fabContainer: {
-    top: -20,
+    top: -18,
     justifyContent: 'center',
     alignItems: 'center',
   },
   fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.fabGreen,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: Colors.fabGreen,
+    elevation: 6,
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  fabIcon: {
-    color: Colors.white,
-    fontSize: 32,
-    fontWeight: '300',
-    marginTop: -2,
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
   },
 });

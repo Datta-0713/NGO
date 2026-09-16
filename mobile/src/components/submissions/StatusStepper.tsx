@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { Theme } from '../../constants/theme';
 
 interface StatusStepperProps {
   status: 'pending' | 'under_review' | 'published' | 'rejected';
@@ -9,64 +9,50 @@ interface StatusStepperProps {
 
 export const StatusStepper: React.FC<StatusStepperProps> = ({ status }) => {
   const steps = [
-    { id: 'submitted', label: 'Submitted', sublabel: 'Received' },
-    { id: 'review', label: 'Under Review', sublabel: 'Our team is reviewing' },
-    { 
-      id: 'final', 
-      label: status === 'rejected' ? 'Not Published' : 'Published', 
-      sublabel: status === 'published' ? 'Live on the feed!' : status === 'rejected' ? 'See feedback below' : 'You will be notified' 
-    },
+    { id: 'submitted', label: 'Submitted' },
+    { id: 'review',    label: 'Under Review' },
+    { id: 'final',     label: status === 'rejected' ? 'Not Published' : 'Published' },
   ];
 
-  const getStepState = (index: number) => {
-    const statusOrder = { pending: 1, published: 2, rejected: 2 };
-    const currentOrder = (statusOrder as any)[status] ?? 0;
-    
-    if (index < currentOrder) return 'completed';
-    if (index === currentOrder) return 'current';
-    return 'pending';
-  };
+  const currentStep = status === 'pending' ? 1 : 2;
+  const isRejected = status === 'rejected';
 
   return (
     <View style={styles.container}>
       {steps.map((step, index) => {
-        const state = getStepState(index);
-        const isLast = index === steps.length - 1;
-        
+        const completed = index < currentStep;
+        const current   = index === currentStep;
+        const isLast    = index === steps.length - 1;
+        const rejected  = isRejected && index === 2;
+
         return (
           <React.Fragment key={step.id}>
-            <View style={styles.stepContainer}>
+            <View style={styles.stepWrap}>
               <View style={[
                 styles.circle,
-                state === 'completed' && styles.circleCompleted,
-                state === 'current' && styles.circleCurrent,
-                state === 'pending' && styles.circlePending,
-                status === 'rejected' && state === 'current' && styles.circleRejected
+                completed && styles.circleCompleted,
+                current   && styles.circleCurrent,
+                rejected  && styles.circleRejected,
               ]}>
-                {state === 'completed' ? (
-                  <Text style={styles.checkIcon}>✓</Text>
+                {completed ? (
+                  <Ionicons name="checkmark" size={13} color="#fff" />
                 ) : (
                   <View style={[
-                    styles.innerDot,
-                    state === 'current' && styles.innerDotCurrent,
-                    status === 'rejected' && state === 'current' && styles.innerDotRejected
+                    styles.dot,
+                    current && (rejected ? styles.dotRejected : styles.dotCurrent),
                   ]} />
                 )}
               </View>
               <Text style={[
                 styles.label,
-                state === 'current' && styles.labelCurrent,
-                status === 'rejected' && state === 'current' && styles.labelRejected
+                current   && styles.labelCurrent,
+                rejected  && styles.labelRejected,
               ]}>
                 {step.label}
               </Text>
             </View>
-            
             {!isLast && (
-              <View style={[
-                styles.line,
-                state === 'completed' ? styles.lineCompleted : styles.linePending
-              ]} />
+              <View style={[styles.line, completed ? styles.lineCompleted : styles.linePending]} />
             )}
           </React.Fragment>
         );
@@ -76,79 +62,24 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ status }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Theme.spacing.md,
-  },
-  stepContainer: {
-    alignItems: 'center',
-    width: 80,
-  },
+  container: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+  stepWrap: { alignItems: 'center', width: 80 },
   circle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    marginBottom: Theme.spacing.xs,
+    width: 26, height: 26, borderRadius: 13,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: '#E5E7EB',
+    backgroundColor: '#fff', marginBottom: 6,
   },
-  circleCompleted: {
-    backgroundColor: Colors.success,
-    borderColor: Colors.success,
-  },
-  circleCurrent: {
-    backgroundColor: Colors.white,
-    borderColor: Colors.accent,
-  },
-  circleRejected: {
-    borderColor: Colors.error,
-  },
-  circlePending: {
-    backgroundColor: Colors.white,
-    borderColor: Colors.border,
-  },
-  innerDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: 'transparent',
-  },
-  innerDotCurrent: {
-    backgroundColor: Colors.accent,
-  },
-  innerDotRejected: {
-    backgroundColor: Colors.error,
-  },
-  checkIcon: {
-    color: Colors.white,
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  label: {
-    fontSize: Theme.typography.size.xs,
-    color: Colors.textMuted,
-    textAlign: 'center',
-  },
-  labelCurrent: {
-    color: Colors.accent,
-    fontWeight: Theme.typography.weight.bold,
-  },
-  labelRejected: {
-    color: Colors.error,
-  },
-  line: {
-    flex: 1,
-    height: 2,
-    marginTop: -20, 
-    marginHorizontal: -10,
-  },
-  lineCompleted: {
-    backgroundColor: Colors.success,
-  },
-  linePending: {
-    backgroundColor: Colors.border,
-  },
+  circleCompleted: { backgroundColor: Colors.success, borderColor: Colors.success },
+  circleCurrent:   { borderColor: Colors.accent },
+  circleRejected:  { borderColor: Colors.error },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'transparent' },
+  dotCurrent:  { backgroundColor: Colors.accent },
+  dotRejected: { backgroundColor: Colors.error },
+  label: { fontSize: 11, color: '#9CA3AF', textAlign: 'center' },
+  labelCurrent:  { color: Colors.accent, fontWeight: '700' },
+  labelRejected: { color: Colors.error,  fontWeight: '700' },
+  line: { flex: 1, height: 2, marginTop: -20, marginHorizontal: -10 },
+  lineCompleted: { backgroundColor: Colors.success },
+  linePending:   { backgroundColor: '#E5E7EB' },
 });

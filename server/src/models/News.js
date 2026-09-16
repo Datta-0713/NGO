@@ -19,6 +19,12 @@ const newsSchema = new mongoose.Schema({
   adminNotes: { type: String, select: false },
   rejectionMessage: { type: String, default: '' },
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  comments: [{
+    _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    text: { type: String, required: true, maxlength: 1000, trim: true },
+    createdAt: { type: Date, default: Date.now }
+  }],
   views: { type: Number, default: 0 },
   publishedAt: { type: Date }
 }, {

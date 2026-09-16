@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { fetchFeed, toggleLike } from '../../store/slices/feedSlice';
@@ -78,7 +79,7 @@ export const HomeScreen = () => {
 
   const BellIcon = () => (
     <View>
-      <Text style={{ fontSize: 24 }}>🔔</Text>
+      <Ionicons name="notifications-outline" size={24} color="#374151" />
       {unreadCount > 0 && (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
@@ -89,8 +90,10 @@ export const HomeScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Header 
-        title="NEXY Foundation" 
+      <Header
+        title="NEXY Foundation"
+        subtitle="Building stronger communities together"
+        showLogo={true}
         rightIcon={<BellIcon />}
         onRightPress={() => navigation.navigate('Updates')}
       />
