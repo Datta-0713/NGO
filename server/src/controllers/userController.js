@@ -9,9 +9,9 @@ const getProfile = asyncHandler(async (req, res) => {
 const updateProfile = asyncHandler(async (req, res) => {
   const { name, bio, location } = req.body;
   
-  if (name) req.user.name = name;
-  if (bio) req.user.bio = bio;
-  if (location) req.user.location = location;
+  if (name !== undefined && name.trim()) req.user.name = name.trim();
+  if (bio !== undefined) req.user.bio = bio.trim();
+  if (location !== undefined) req.user.location = location.trim();
   
   if (req.uploadedPhotoUrl) {
     req.user.profilePhoto = req.uploadedPhotoUrl;

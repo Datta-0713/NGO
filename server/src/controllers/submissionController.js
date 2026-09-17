@@ -104,10 +104,13 @@ const rejectSubmission = asyncHandler(async (req, res) => {
   }
 
   if (news.submittedBy) {
+    const adminMsg = news.rejectionMessage && news.rejectionMessage !== 'Your story needs a few improvements before it can go live.'
+      ? ` Reason: "${news.rejectionMessage}"`
+      : '';
     await notificationService.createNotification(news.submittedBy, {
       type: 'news_rejected',
-      title: 'Almost there! 💪',
-      message: `Your story "${news.title}" needs a small tweak before it can go live — feel free to revise and resubmit!`,
+      title: '⚠️ Story Needs Changes',
+      message: `Your story "${news.title}" was not approved.${adminMsg} Feel free to revise and resubmit!`,
       relatedEntity: { entityId: news._id, entityType: 'News' },
     });
   }

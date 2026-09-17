@@ -93,8 +93,8 @@ const forgotPassword = asyncHandler(async (req, res) => {
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save({ validateBeforeSave: false });
-
-    throw new AppError('There was an error sending the email. Try again later!', 500);
+    console.error('[ForgotPassword] Email send failed:', err.message);
+    throw new AppError('Could not send the reset email. Please check your email address and try again.', 500);
   }
 });
 

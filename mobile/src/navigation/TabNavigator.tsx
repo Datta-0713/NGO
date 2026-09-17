@@ -10,6 +10,7 @@ import { Colors } from '../constants/colors';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { AppStackParamList } from './AppStack';
+import { useAppSelector } from '../hooks/useAppSelector';
 
 export type TabParamList = {
   Home: undefined;
@@ -37,6 +38,8 @@ const CustomTabBarButton = () => {
 };
 
 export const TabNavigator = () => {
+  const unreadCount = useAppSelector(state => state.notifications.unreadCount);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -45,12 +48,29 @@ export const TabNavigator = () => {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: '#9CA3AF',
         tabBarLabelStyle: styles.tabLabel,
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ focused, color }) => {
           let iconName: keyof typeof Ionicons.glyphMap = 'home';
           if (route.name === 'Home')    iconName = focused ? 'home'          : 'home-outline';
           if (route.name === 'Search')  iconName = focused ? 'search'        : 'search-outline';
           if (route.name === 'Updates') iconName = focused ? 'notifications' : 'notifications-outline';
           if (route.name === 'Profile') iconName = focused ? 'person'        : 'person-outline';
+
+          // Bell icon with unread badge
+          if (route.name === 'Updates') {
+            return (
+              <View>
+                <Ionicons name={iconName} size={22} color={color} />
+                {unreadCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          }
+
           return <Ionicons name={iconName} size={22} color={color} />;
         },
       })}
@@ -107,5 +127,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 6,
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    backgroundColor: '#EF4444',
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '800',
   },
 });
