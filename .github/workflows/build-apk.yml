@@ -24,11 +24,16 @@ jobs:
         run: npm ci
         working-directory: ./mobile
 
-      - name: Build APK locally on GitHub runner
-        run: npx eas build --platform android --profile preview --local --non-interactive
+      - name: Build APK locally on GitHub runner (with auto-retry)
+        run: |
+          for i in 1 2 3; do
+            npx eas build --platform android --profile preview --local --non-interactive && break || echo "Build failed, retrying ($i/3)..."
+            sleep 10
+          done
         working-directory: ./mobile
         env:
           EXPO_TOKEN: ${{ secrets.GIT }}
+          GRADLE_OPTS: "-Xmx3072m -XX:MaxMetaspaceSize=512m"
           
       - name: Upload APK to GitHub Artifacts
         uses: actions/upload-artifact@v4
