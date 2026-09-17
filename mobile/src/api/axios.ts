@@ -19,6 +19,14 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // In React Native, if we are sending FormData, we MUST let XHR set the Content-Type
+    // to multipart/form-data with the correct boundary. 
+    // We remove the default application/json header so XHR can do its job.
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+    
     return config;
   },
   (error) => Promise.reject(error)
