@@ -1,35 +1,20 @@
 'use strict';
 const mongoose = require('mongoose');
-const { MONGO_URI } = require('./env');
+const { MONGO_URI, NODE_ENV } = require('./env');
 
-let retryCount = 0;
-const MAX_RETRIES = 5;
-
-/**
- * Connects to MongoDB with exponential backoff retry logic.
- */
+let connected = false;
 const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(MONGO_URI, {
-      serverSelectionTimeoutMS: 5000,
-    });
-    console.log(`✅ MongoDB connected: ${conn.connection.host}`);
-    retryCount = 0;
-  } catch (error) {
-    retryCount += 1;
-    console.error(`❌ MongoDB connection failed (attempt ${retryCount}/${MAX_RETRIES}): ${error.message}`);
-    if (retryCount >= MAX_RETRIES) {
-      console.error('Max retries reached. Exiting.');
-      process.exit(1);
-    }
-    const delay = Math.min(1000 * 2 ** retryCount, 30000);
-    console.log(`Retrying in ${delay / 1000}s...`);
-    setTimeout(connectDB, delay);
-  }
+  if (connected && mongoose.connection.readyState === 1) return;
+  const conn = await mongoose.connect(MONGO_URI, {
+    serverSelectionTimeoutMS: 10_000,
+    maxPoolSize: NODE_ENV === 'production' ? 20 : 10,
+    minPoolSize: NODE_ENV === 'production' ? 2 : 0,
+  });
+  connected = true;
+  console.log(`✅ MongoDB connected: ${conn.connection.host}`);
 };
 
-mongoose.connection.on('disconnected', () => {
-  console.warn('⚠️  MongoDB disconnected.');
-});
+mongoose.connection.on('disconnected', () => { connected = false; console.warn('⚠️ MongoDB disconnected.'); });
+mongoose.connection.on('error', (error) => console.error('MongoDB error:', error.message));
 
 module.exports = connectDB;

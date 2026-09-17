@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, ActivityIndicator,
   TouchableOpacity, TextInput, KeyboardAvoidingView, Platform,
-  FlatList, Alert,
+  FlatList, Alert, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Video, ResizeMode } from 'expo-av';
@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { Avatar } from '../../components/common/Avatar';
 import { feedApi } from '../../api/feedApi';
+import { Config } from '../../constants/config';
 import { isValid, format, formatDistanceToNow } from 'date-fns';
 import type { NewsItem, Comment } from '../../types';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
@@ -38,6 +39,7 @@ export const NewsDetailScreen = () => {
   const [commentText, setCommentText]   = useState('');
   const [posting, setPosting]           = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
 
@@ -67,19 +69,45 @@ export const NewsDetailScreen = () => {
 
   const handleLike = () => {
     if (!news) return;
-    const uid = currentUser?._id || '';
-    const alreadyLiked = news.liked ?? news.likes?.includes(uid);
-    dispatch(toggleLike(news._id));
+      const alreadyLiked = Boolean(news.liked);
+    dispatch(toggleLike({ id: news._id, liked: !!alreadyLiked }));
     setNews(prev => {
       if (!prev) return prev;
       return {
         ...prev,
         liked: !alreadyLiked,
-        likes: alreadyLiked
-          ? (prev.likes || []).filter(x => x !== uid)
-          : [...(prev.likes || []), uid],
+        likesCount: Math.max(0, (prev.likesCount || 0) + (alreadyLiked ? -1 : 1)),
       };
     });
+  };
+
+  const handleSave = async () => {
+    if (!news || saving) return;
+    setSaving(true);
+    try {
+      const result = news.saved ? await feedApi.unsaveNews(news._id) : await feedApi.saveNews(news._id);
+      setNews(prev => prev ? { ...prev, saved: result.saved } : prev);
+    } catch (e: any) {
+      Alert.alert('Could not update saved stories', e?.response?.data?.message || 'Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!news) return;
+    const link = Config.PUBLIC_WEB_URL
+      ? `${Config.PUBLIC_WEB_URL.replace(/\/$/, '')}/news/${news._id}`
+      : `asiannewsbureau://news/${news._id}`;
+    try {
+      await Share.share({
+        title: news.title,
+        message: `${news.title}\n\nRead this story on Asian News Bureau:\n${link}`,
+        url: link,
+      });
+    } catch (e) {
+      console.warn('Share failed:', e);
+    }
   };
 
   const handlePostComment = async () => {
@@ -130,8 +158,8 @@ export const NewsDetailScreen = () => {
     );
   }
 
-  const isLiked    = news.liked ?? news.likes?.includes(currentUser?._id || '') ?? false;
-  const likesCount = news.likes?.length ?? 0;
+  const isLiked    = Boolean(news.liked);
+  const likesCount = news.likesCount ?? 0;
   const author     = news.submittedBy as any;
 
   return (
@@ -143,6 +171,12 @@ export const NewsDetailScreen = () => {
             <Ionicons name="arrow-back" size={24} color="#1A1A2E" />
           </TouchableOpacity>
           <View style={styles.navActions}>
+            <TouchableOpacity style={styles.actionBtn} onPress={handleSave} disabled={saving} activeOpacity={0.7}>
+              <Ionicons name={news.saved ? 'bookmark' : 'bookmark-outline'} size={21} color={news.saved ? Colors.primary : '#6B7280'} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionBtn} onPress={handleShare} activeOpacity={0.7}>
+              <Ionicons name="share-outline" size={21} color="#6B7280" />
+            </TouchableOpacity>
             <TouchableOpacity style={styles.likeBtn} onPress={handleLike} activeOpacity={0.7}>
               <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={22} color={isLiked ? Colors.heartRed : '#6B7280'} />
               <Text style={[styles.likeCount, isLiked && styles.likedText]}>{likesCount}</Text>
@@ -306,6 +340,7 @@ const styles = StyleSheet.create({
   },
   navBack: { width: 40, height: 40, justifyContent: 'center' },
   navActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  actionBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 19, backgroundColor: '#F9FAFB' },
   likeBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F9FAFB', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
   likeCount: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
   likedText: { color: Colors.heartRed },

@@ -75,8 +75,8 @@ const NewsPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {items.map(item => (
-                  <tr 
-                    key={item._id} 
+                  <tr
+                    key={item._id}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={() => setSelectedItem(item)}
                   >

@@ -11,6 +11,9 @@ import { useAppSelector } from '../../hooks/useAppSelector';
 import { fetchMySubmissions } from '../../store/slices/submissionsSlice';
 import { isValid, format } from 'date-fns';
 import type { NewsItem } from '../../types';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { AppStackParamList } from '../../navigation/AppStack';
 
 const safeDate = (d: string) => {
   const p = new Date(d);
@@ -21,6 +24,8 @@ const StatusBadge = ({ status }: { status: NewsItem['status'] }) => {
   const map: Record<string, { label: string; color: string }> = {
     published: { label: 'Published', color: Colors.success },
     rejected:  { label: 'Rejected',  color: Colors.error   },
+    under_review: { label: 'Under Review', color: Colors.warning },
+    needs_changes: { label: 'Changes Needed', color: Colors.accent },
     pending:   { label: 'Under Review', color: Colors.warning },
   };
   const s = map[status] ?? map.pending;
@@ -63,6 +68,7 @@ const FeedbackCard = ({ status, rejectionMessage }: { status: NewsItem['status']
 
 export const MySubmissionsScreen = () => {
   const dispatch = useAppDispatch();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { mySubmissions, loading } = useAppSelector(state => state.submissions);
 
   useEffect(() => {
@@ -115,6 +121,12 @@ export const MySubmissionsScreen = () => {
             <StatusStepper status={item.status} />
 
             <FeedbackCard status={item.status} rejectionMessage={item.rejectionMessage} />
+            {(item.status === 'needs_changes' || item.status === 'rejected') && (
+              <TouchableOpacity style={styles.resubmitBtn} onPress={() => navigation.navigate('ResubmitNews', { id: item._id })}>
+                <Ionicons name="create-outline" size={16} color={Colors.primary} />
+                <Text style={styles.resubmitText}>Edit & Resubmit</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       />
@@ -145,4 +157,6 @@ const styles = StyleSheet.create({
   feedbackCard: { flexDirection: 'row', padding: 12, borderRadius: 10, marginTop: 12 },
   feedbackTitle: { fontSize: 13, fontWeight: '700', marginBottom: 3 },
   feedbackText: { fontSize: 12, lineHeight: 17 },
+  resubmitBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: Colors.primary, borderRadius: 10, paddingVertical: 10, marginTop: 12 },
+  resubmitText: { fontSize: 13, fontWeight: '700', color: Colors.primary },
 });

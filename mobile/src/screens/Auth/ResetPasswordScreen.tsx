@@ -15,7 +15,7 @@ type ResetPasswordRouteProp = RouteProp<AuthStackParamList, 'ResetPassword'>;
 export const ResetPasswordScreen = () => {
   const navigation = useNavigation<ResetPasswordNavigationProp>();
   const route = useRoute<ResetPasswordRouteProp>();
-  
+
   // Extract token from route params (passed by Deep Linking)
   const token = route.params?.token;
 
@@ -38,10 +38,10 @@ export const ResetPasswordScreen = () => {
       setError('Invalid or missing reset token');
       return;
     }
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       await api.post(`/auth/reset-password/${token}`, { password });
       setSuccess(true);
@@ -83,7 +83,7 @@ export const ResetPasswordScreen = () => {
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
-        
+
         {success ? (
           <View style={styles.successContainer}>
             <Ionicons name="checkmark-circle" size={56} color={Colors.primary} />

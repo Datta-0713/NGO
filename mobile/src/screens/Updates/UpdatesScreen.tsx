@@ -30,7 +30,7 @@ export const UpdatesScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header title="Updates" />
-      
+
       <FlatList
         data={items}
         keyExtractor={item => item._id}

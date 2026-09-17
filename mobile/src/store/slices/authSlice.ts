@@ -103,6 +103,10 @@ export const initializeAuth = createAsyncThunk(
 export const logoutThunk = createAsyncThunk(
   'auth/logout',
   async (_, { dispatch }) => {
+    const refreshToken = await SecureStore.getItemAsync('refreshToken');
+    try {
+      if (refreshToken) await authApi.logout(refreshToken);
+    } catch {}
     await SecureStore.deleteItemAsync('accessToken');
     await SecureStore.deleteItemAsync('refreshToken');
     dispatch(authSlice.actions.logout());

@@ -11,6 +11,9 @@ import { Avatar } from '../../components/common/Avatar';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { logoutThunk, updateProfileThunk } from '../../store/slices/authSlice';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { AppStackParamList } from '../../navigation/AppStack';
 import { fetchCreditHistory } from '../../store/slices/profileSlice';
 import { isValid } from 'date-fns';
 import { format } from 'date-fns';
@@ -18,10 +21,10 @@ import type { CreditTransaction } from '../../types';
 
 export const ProfileScreen = () => {
   const dispatch = useAppDispatch();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { user } = useAppSelector(state => state.auth);
   const { creditHistory, loading: creditsLoading } = useAppSelector(state => state.profile);
 
-  const [activeTab, setActiveTab] = useState<'Submitted' | 'Published'>('Submitted');
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editName, setEditName] = useState(user?.name || '');
   const [editBio, setEditBio] = useState(user?.bio || '');
@@ -142,22 +145,18 @@ export const ProfileScreen = () => {
           </View>
         </View>
 
-        {/* Tabs */}
-        <View style={styles.tabsContainer}>
-          {(['Submitted', 'Published'] as const).map(tab => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tab, activeTab === tab && styles.activeTab]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.tabContent}>
-          <Ionicons name="document-text-outline" size={36} color="#D1D5DB" />
-          <Text style={styles.placeholderText}>No {activeTab.toLowerCase()} stories yet.</Text>
+        {/* Activity shortcuts */}
+        <View style={styles.actionsSection}>
+          <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('MySubmissions')}>
+            <View style={styles.actionIcon}><Ionicons name="document-text-outline" size={19} color={Colors.primary} /></View>
+            <View style={styles.actionCopy}><Text style={styles.actionTitle}>My Submissions</Text><Text style={styles.actionSubtitle}>Track, revise, and resubmit your stories</Text></View>
+            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('SavedStories')}>
+            <View style={styles.actionIcon}><Ionicons name="bookmark-outline" size={19} color={Colors.primary} /></View>
+            <View style={styles.actionCopy}><Text style={styles.actionTitle}>Saved Stories</Text><Text style={styles.actionSubtitle}>Read the stories you bookmarked</Text></View>
+            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+          </TouchableOpacity>
         </View>
 
         {/* Credits History */}
@@ -170,8 +169,8 @@ export const ProfileScreen = () => {
                   <Text style={styles.transactionReason}>{t.reason?.replace(/_/g, ' ')}</Text>
                   <Text style={styles.transactionDate}>{safeDate(t.createdAt)}</Text>
                 </View>
-                <Text style={[styles.transactionAmount, t.amount > 0 ? styles.amountPositive : styles.amountNegative]}>
-                  {t.amount > 0 ? '+' : ''}{t.amount}
+                <Text style={[styles.transactionAmount, t.type === 'credit' ? styles.amountPositive : styles.amountNegative]}>
+                  {t.type === 'credit' ? '+' : '-'}{t.amount}
                 </Text>
               </View>
             ))}
@@ -269,6 +268,13 @@ const styles = StyleSheet.create({
   activeTab: { backgroundColor: '#EDE9FE' },
   tabText: { fontSize: 14, fontWeight: '500', color: '#9CA3AF' },
   activeTabText: { color: '#6C3FC6', fontWeight: '700' },
+
+  actionsSection: { backgroundColor: '#fff', borderRadius: 14, marginHorizontal: 16, marginBottom: 12, overflow: 'hidden', },
+  actionRow: { flexDirection: 'row', alignItems: 'center', padding: 15, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  actionIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  actionCopy: { flex: 1 },
+  actionTitle: { fontSize: 14, fontWeight: '700', color: '#1A1A2E' },
+  actionSubtitle: { fontSize: 11, color: '#9CA3AF', marginTop: 3 },
 
   tabContent: {
     backgroundColor: '#fff', borderRadius: 14, marginHorizontal: 16,

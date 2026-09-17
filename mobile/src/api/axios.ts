@@ -1,107 +1,73 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Config } from '../constants/config';
 import { store } from '../store';
 import { logout, setTokens } from '../store/slices/authSlice';
 
+interface RetriableConfig extends AxiosRequestConfig {
+  _retry?: boolean;
+  _skipAuthRefresh?: boolean;
+}
+
 const defaultAxios = axios;
 
 export const api = defaultAxios.create({
   baseURL: Config.API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  timeout: 20_000,
+  headers: { 'Content-Type': 'application/json' },
 });
 
-api.interceptors.request.use(
-  async (config) => {
-    const token = await SecureStore.getItemAsync('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    
-    // In React Native, if we are sending FormData, we MUST let XHR set the Content-Type
-    // to multipart/form-data with the correct boundary. 
-    // We remove the default application/json header so XHR can do its job.
-    if (config.data instanceof FormData) {
-      delete config.headers['Content-Type'];
-    }
-    
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+api.interceptors.request.use(async (config) => {
+  const token = await SecureStore.getItemAsync('accessToken');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  const deviceId = await SecureStore.getItemAsync('deviceId');
+  if (deviceId) config.headers['X-Device-Id'] = deviceId;
+  if (config.data instanceof FormData) delete config.headers['Content-Type'];
+  return config;
+});
 
-let isRefreshing = false;
-let failedQueue: any[] = [];
+let refreshPromise: Promise<string> | null = null;
 
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
+const refreshAccessToken = async (): Promise<string> => {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    const refreshToken = await SecureStore.getItemAsync('refreshToken');
+    if (!refreshToken) throw new Error('No refresh token available');
+    const { data } = await defaultAxios.post(
+      `${Config.API_BASE_URL}/auth/refresh-token`,
+      { refreshToken },
+      { timeout: 20_000 },
+    );
+    const accessToken = data.data.accessToken;
+    const nextRefresh = data.data.refreshToken;
+    await SecureStore.setItemAsync('accessToken', accessToken);
+    if (nextRefresh) await SecureStore.setItemAsync('refreshToken', nextRefresh);
+    store.dispatch(setTokens({ accessToken, refreshToken: nextRefresh || refreshToken }));
+    return accessToken;
+  })().finally(() => { refreshPromise = null; });
+  return refreshPromise;
 };
 
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        return new Promise(function (resolve, reject) {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = 'Bearer ' + token;
-            return api(originalRequest);
-          })
-          .catch((err) => {
-            return Promise.reject(err);
-          });
-      }
-
+  async (error: AxiosError) => {
+    const originalRequest = (error.config || {}) as RetriableConfig;
+    const requestUrl = String(originalRequest.url || '');
+    const isAuthRoute = /\/auth\/(login|register|refresh-token|forgot-password|reset-password)/.test(requestUrl);
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest._skipAuthRefresh && !isAuthRoute) {
       originalRequest._retry = true;
-      isRefreshing = true;
-
       try {
-        const refreshToken = await SecureStore.getItemAsync('refreshToken');
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
-
-        const { data } = await defaultAxios.post(`${Config.API_BASE_URL}/auth/refresh-token`, {
-          refreshToken,
-        });
-
-        const newAccessToken = data.data.accessToken;
-        const newRefreshToken = data.data.refreshToken;
-
-        await SecureStore.setItemAsync('accessToken', newAccessToken);
-        await SecureStore.setItemAsync('refreshToken', newRefreshToken);
-
-        store.dispatch(setTokens({ accessToken: newAccessToken, refreshToken: newRefreshToken }));
-
-        api.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
-        processQueue(null, newAccessToken);
+        const token = await refreshAccessToken();
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${token}`;
         return api(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError, null);
         await SecureStore.deleteItemAsync('accessToken');
         await SecureStore.deleteItemAsync('refreshToken');
         store.dispatch(logout());
         return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
       }
     }
-
     return Promise.reject(error);
-  }
+  },
 );

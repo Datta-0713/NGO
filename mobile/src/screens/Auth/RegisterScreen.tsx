@@ -16,7 +16,7 @@ export const RegisterScreen = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [validationError, setValidationError] = useState('');
-  
+
   const dispatch = useAppDispatch();
   const { loading, error } = useAppSelector((state) => state.auth);
   const navigation = useNavigation();
@@ -39,7 +39,7 @@ export const RegisterScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
@@ -94,7 +94,7 @@ export const RegisterScreen = () => {
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account? </Text>
-              <Text 
+              <Text
                 style={styles.linkText}
                 onPress={() => navigation.goBack()}
               >

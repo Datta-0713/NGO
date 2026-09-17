@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Share, Alert } from 'react-native';
-import { Video, ResizeMode } from 'expo-av';
+
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { Avatar } from '../common/Avatar';
@@ -9,8 +9,9 @@ import { formatDistanceToNow, isValid } from 'date-fns';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/AppStack';
-import { useAppSelector } from '../../hooks/useAppSelector';
 import { api } from '../../api/axios';
+import { feedApi } from '../../api/feedApi';
+import { Config } from '../../constants/config';
 
 interface NewsCardProps {
   item: NewsItem;
@@ -19,15 +20,16 @@ interface NewsCardProps {
 
 export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  const currentUserId = useAppSelector(state => state.auth.user?._id || '');
 
   const dateObj = item.createdAt ? new Date(item.createdAt) : null;
   const timeAgo = dateObj && isValid(dateObj)
     ? formatDistanceToNow(dateObj, { addSuffix: true })
     : '';
   const firstMedia = item.media?.[0];
-  const isLiked = item.liked ?? (item.likes?.includes(currentUserId) ?? false);
-  const likesCount = item.likes?.length ?? 0;
+  const isLiked = Boolean(item.liked);
+  const [saved, setSaved] = useState(Boolean(item.saved));
+  const [saving, setSaving] = useState(false);
+  const likesCount = item.likesCount ?? 0;
   const author = item.submittedBy;
 
   const handleReport = async () => {
@@ -40,23 +42,41 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
     }
   };
 
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const next = saved ? await feedApi.unsaveNews(item._id) : await feedApi.saveNews(item._id);
+      setSaved(Boolean(next.saved));
+    } catch (error: any) {
+      Alert.alert('Could not update saved stories', error?.response?.data?.message || 'Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const link = Config.PUBLIC_WEB_URL
+        ? `${Config.PUBLIC_WEB_URL.replace(/\/$/, '')}/news/${item._id}`
+        : `asiannewsbureau://news/${item._id}`;
+      await Share.share({
+        title: item.title,
+        message: `${item.title}\n\nRead this story on Asian News Bureau:\n${link}`,
+        url: link,
+      });
+    } catch (error) {
+      console.warn('Share failed:', error);
+    }
+  };
+
   const handleOptions = () => {
     Alert.alert(
       'Options',
       '',
       [
-        {
-          text: 'Share',
-          onPress: async () => {
-            try {
-              await Share.share({
-                message: `Check out this news: ${item.title}\nRead more on Asian News Bureau!`,
-              });
-            } catch (error) {
-              console.log(error);
-            }
-          }
-        },
+        { text: 'Share', onPress: handleShare },
+        { text: saved ? 'Remove from Saved' : 'Save Story', onPress: handleSave },
         {
           text: 'Report Story',
           onPress: () => {
@@ -71,10 +91,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
           },
           style: 'destructive'
         },
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        }
+        { text: 'Cancel', style: 'cancel' }
       ]
     );
   };
@@ -104,13 +121,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
         <Text style={styles.description} numberOfLines={3}>{item.description}</Text>
         {firstMedia?.url && (
           firstMedia.type === 'video' ? (
-            <Video
-              source={{ uri: firstMedia.url }}
-              style={styles.media}
-              useNativeControls
-              resizeMode={ResizeMode.COVER}
-              isLooping
-            />
+            <View style={[styles.media, styles.videoPreview]}>
+              <Image source={{ uri: firstMedia.thumbnailUrl || firstMedia.url }} style={styles.media} resizeMode="cover" />
+              <View style={styles.playBadge}><Ionicons name="play" size={20} color="#fff" /></View>
+            </View>
           ) : (
             <Image
               source={{ uri: firstMedia.url }}
@@ -132,6 +146,9 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
           <Text style={[styles.likeCount, isLiked && styles.likedText]}>{likesCount}</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity onPress={handleSave} disabled={saving} style={styles.saveButton} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+          <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? Colors.primary : '#9CA3AF'} />
+        </TouchableOpacity>
         <TouchableOpacity
           onPress={() => navigation.navigate('NewsDetail', { id: item._id })}
           style={styles.viewMoreBtn}
@@ -218,6 +235,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   likedText: { color: Colors.heartRed },
+  saveButton: { marginRight: 10, padding: 4 },
+  videoPreview: { position: 'relative', overflow: 'hidden' },
+  playBadge: { position: 'absolute', left: '50%', top: '50%', marginLeft: -22, marginTop: -22, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   viewMoreBtn: {
     flexDirection: 'row',
     alignItems: 'center',

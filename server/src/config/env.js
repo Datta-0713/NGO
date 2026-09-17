@@ -2,19 +2,21 @@
 require('dotenv').config();
 
 const required = [
-  'MONGO_URI', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET',
-  'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'
+  'MONGO_URI',
+  'JWT_ACCESS_SECRET',
+  'JWT_REFRESH_SECRET',
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET',
 ];
 
 required.forEach((key) => {
-  if (!process.env[key]) {
-    throw new Error(`Missing required environment variable: ${key}`);
-  }
+  if (!process.env[key]) throw new Error(`Missing required environment variable: ${key}`);
 });
 
 module.exports = {
   NODE_ENV: process.env.NODE_ENV || 'development',
-  PORT: parseInt(process.env.PORT, 10) || 5000,
+  PORT: Number(process.env.PORT) || 5000,
   MONGO_URI: process.env.MONGO_URI,
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
@@ -24,6 +26,8 @@ module.exports = {
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
-  DEFAULT_CREDIT_AMOUNT: parseInt(process.env.DEFAULT_CREDIT_AMOUNT, 10) || 10,
-  WELCOME_BONUS_CREDITS: parseInt(process.env.WELCOME_BONUS_CREDITS, 10) || 5,
+  EXPO_ACCESS_TOKEN: process.env.EXPO_ACCESS_TOKEN || '',
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+  DEFAULT_CREDIT_AMOUNT: Number.parseInt(process.env.DEFAULT_CREDIT_AMOUNT, 10) || 10,
+  WELCOME_BONUS_CREDITS: Number.parseInt(process.env.WELCOME_BONUS_CREDITS, 10) || 5,
 };

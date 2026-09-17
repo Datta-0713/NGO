@@ -11,36 +11,35 @@ interface FeedState {
   hasMore: boolean;
 }
 
-const initialState: FeedState = {
-  items: [],
-  total: 0,
-  page: 1,
-  loading: false,
-  error: null,
-  hasMore: true,
-};
+const initialState: FeedState = { items: [], total: 0, page: 1, loading: false, error: null, hasMore: true };
 
 export const fetchFeed = createAsyncThunk(
   'feed/fetchFeed',
   async (params: { page: number; limit: number; category?: string; search?: string }, { rejectWithValue }) => {
-    try {
-      // feedApi.getFeed now returns { news, total, page, totalPages } directly
-      return await feedApi.getFeed(params);
-    } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || 'Failed to load feed');
-    }
+    try { return await feedApi.getFeed(params); }
+    catch (err: any) { return rejectWithValue(err.response?.data?.message || 'Failed to load feed'); }
   }
 );
 
 export const toggleLike = createAsyncThunk(
   'feed/toggleLike',
-  async (id: string, { rejectWithValue }) => {
+  async ({ id, liked }: { id: string; liked: boolean }, { rejectWithValue }) => {
     try {
-      const data = await feedApi.likeNews(id);
-      return { id, likesCount: data?.likesCount ?? 0, liked: data?.liked ?? false };
+      const result = liked ? await feedApi.removeLike(id) : await feedApi.setLike(id);
+      return { id, ...result, previousLiked: liked };
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || 'Failed to like');
+      return rejectWithValue({ message: err.response?.data?.message || 'Failed to update like', id });
     }
+  }
+);
+
+export const toggleSave = createAsyncThunk(
+  'feed/toggleSave',
+  async ({ id, saved }: { id: string; saved: boolean }, { rejectWithValue }) => {
+    try {
+      const result = saved ? await feedApi.unsaveNews(id) : await feedApi.saveNews(id);
+      return { id, ...result };
+    } catch (err: any) { return rejectWithValue({ message: err.response?.data?.message || 'Failed to update saved story', id }); }
   }
 );
 
@@ -50,57 +49,48 @@ const feedSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(fetchFeed.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(fetchFeed.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(fetchFeed.fulfilled, (state, action) => {
         state.loading = false;
-        // action.payload = { news, total, page, totalPages }
-        const { news, total, page, totalPages } = action.payload!;
-        if (page === 1) {
-          state.items = news;
-        } else {
-          state.items = [...state.items, ...news];
-        }
+        const { news, total, page, totalPages } = action.payload;
+        state.items = page === 1 ? news : [...state.items, ...news];
         state.page = page;
         state.total = total;
         state.hasMore = page < totalPages;
       })
-      .addCase(fetchFeed.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-      // Optimistically flip the liked state in UI immediately
+      .addCase(fetchFeed.rejected, (state, action) => { state.loading = false; state.error = action.payload as string; })
       .addCase(toggleLike.pending, (state, action) => {
-        const item = state.items.find(i => i._id === action.meta.arg);
-        if (item) {
-          // Use the array length as a proxy — we'll sync properly on fulfilled
-          // Just flip the count so UI feels instant
-          if (item.liked) {
-            item.liked = false;
-            item.likes = item.likes.filter((_, i) => i < item.likes.length - 1);
-          } else {
-            item.liked = true;
-            item.likes = [...(item.likes || []), 'optimistic_temp'];
-          }
-        }
+        const item = state.items.find(i => i._id === action.meta.arg.id);
+        if (!item) return;
+        const currentlyLiked = action.meta.arg.liked;
+        item.liked = !currentlyLiked;
+        item.likesCount = Math.max(0, item.likesCount + (currentlyLiked ? -1 : 1));
       })
       .addCase(toggleLike.fulfilled, (state, action) => {
-        // Sync with confirmed server values — replace optimistic state
         const item = state.items.find(i => i._id === action.payload.id);
-        if (item) {
-          item.liked = action.payload.liked;
-          // Build a clean likes array of the correct length using real count
-          const confirmed = action.payload.likesCount;
-          // Remove optimistic entry and set correct length
-          const filtered = (item.likes || []).filter(id => id !== 'optimistic_temp');
-          if (action.payload.liked) {
-            item.likes = [...filtered.slice(0, confirmed - 1), 'confirmed'];
-          } else {
-            item.likes = filtered.slice(0, confirmed);
-          }
-        }
+        if (!item) return;
+        item.liked = action.payload.liked;
+        item.likesCount = action.payload.likesCount;
+      })
+      .addCase(toggleLike.rejected, (state, action) => {
+        const payload = action.payload as { id: string } | undefined;
+        const id = payload?.id || action.meta.arg.id;
+        const item = state.items.find(i => i._id === id);
+        if (!item) return;
+        item.liked = action.meta.arg.liked;
+        item.likesCount = Math.max(0, item.likesCount + (action.meta.arg.liked ? 1 : -1));
+      })
+      .addCase(toggleSave.pending, (state, action) => {
+        const item = state.items.find(i => i._id === action.meta.arg.id);
+        if (item) item.saved = !action.meta.arg.saved;
+      })
+      .addCase(toggleSave.fulfilled, (state, action) => {
+        const item = state.items.find(i => i._id === action.payload.id);
+        if (item) item.saved = action.payload.saved;
+      })
+      .addCase(toggleSave.rejected, (state, action) => {
+        const item = state.items.find(i => i._id === action.meta.arg.id);
+        if (item) item.saved = action.meta.arg.saved;
       });
   },
 });

@@ -1,79 +1,166 @@
-# Asian News Bureau Community News API
+# Asian News Bureau API
 
-This is the backend service for the Asian News Bureau Community News App. It provides a REST API to serve both a React Native mobile app and a React web admin panel.
+Node.js/Express/MongoDB backend for the Asian News Bureau community-news platform.
 
 ## Prerequisites
 
-- Node.js (v18+)
-- MongoDB (running locally or MongoDB Atlas)
-- Cloudinary Account (for media uploads)
+- Node.js 18+
+- MongoDB 6+; production transactions require MongoDB Atlas or a replica set
+- Cloudinary account
+- Expo/EAS project for push notifications
 
 ## Installation
 
-1. Clone the repository and navigate to the `server` directory.
-2. Run `npm install` to install dependencies.
-3. Copy `.env.example` to `.env` and fill in your credentials.
+```bash
+npm ci
+cp .env.example .env
+# populate secrets in .env for local development only
+```
 
-## Environment Variables
+Never commit a real `.env` file. Production secrets belong in the deployment platform's secret store.
 
-| Variable | Description |
-| --- | --- |
-| `NODE_ENV` | Environment mode (`development` or `production`) |
-| `PORT` | Port for the server to listen on |
+## Commands
+
+```bash
+npm run dev          # development server
+npm start            # production server
+npm test             # Jest tests
+npm run check        # JavaScript syntax check
+npm run admin:create # explicitly create the first admin
+npm run migrate:legacy # migrate legacy embedded social arrays after backup
+```
+
+## Core environment variables
+
+| Variable | Purpose |
+|---|---|
+| `NODE_ENV` | `development` / `production` |
+| `PORT` | API port |
 | `MONGO_URI` | MongoDB connection string |
-| `JWT_ACCESS_SECRET` | Secret key for JWT access tokens |
-| `JWT_REFRESH_SECRET` | Secret key for JWT refresh tokens |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
+| `JWT_ACCESS_SECRET` | Access-token signing secret |
+| `JWT_REFRESH_SECRET` | Refresh-token signing secret |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+| `CLIENT_URL` | Allowed admin origin(s) for CORS |
+| `EXPO_ACCESS_TOKEN` | Expo push API access token when enabled |
+| `DEFAULT_CREDIT_AMOUNT` | Fallback approval credit setting |
+| `WELCOME_BONUS_CREDITS` | Fallback registration credit setting |
 
-## Running the Server
+Credit defaults can also be persisted and audited from the admin Settings page.
 
-- **Development Mode**: `npm run dev` (uses nodemon)
-- **Production Mode**: `npm start`
+## Authentication
 
-## API Endpoints Summary
+Access tokens are short-lived. Refresh tokens are backed by hashed server-side `Session` records and are rotated on refresh. Logout revokes the active session. Password reset and account deactivation revoke active sessions as well.
 
-### Auth (`/api/auth`)
-- `POST /register` - Register a new user
-- `POST /login` - Log in a user
-- `POST /refresh-token` - Refresh access token
-- `POST /logout` - Log out
-- `GET /me` - Get current authenticated user
+## API summary
 
-### Users (`/api/users`)
-- `GET /me` - Get user profile
-- `PATCH /me` - Update user profile
-- `GET /me/stats` - Get user contribution stats
+### Auth
 
-### News (`/api/news`)
-- `GET /` - Get public news feed
-- `GET /:id` - Get a specific news post
-- `POST /` - (Admin) Create a news post directly
-- `PATCH /:id/like` - Toggle like on a news post
-- `DELETE /:id` - (Admin) Delete a news post
+```text
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/refresh-token
+POST /api/auth/logout
+POST /api/auth/forgot-password
+POST /api/auth/reset-password/:token
+GET  /api/auth/me
+```
 
-### Submissions (`/api/submissions`)
-- `POST /` - Submit a news post for review
-- `GET /mine` - Get user's own submissions
+### Users
 
-### Admin (`/api/admin`)
-- `GET /dashboard/stats` - Get admin dashboard statistics
-- `GET /submissions` - Get pending submissions queue
-- `GET /submissions/:id` - Get specific submission details
-- `PATCH /submissions/:id/approve` - Approve a submission
-- `PATCH /submissions/:id/reject` - Reject a submission
-- `GET /users` - Get all users
-- `GET /users/:id` - Get a specific user
-- `PATCH /credits/adjust` - Adjust user credits manually
-- `POST /notifications/broadcast` - Broadcast a notification to all users
+```text
+GET    /api/users/me
+PATCH  /api/users/me
+GET    /api/users/me/stats
+PATCH  /api/users/me/push-token
+DELETE /api/users/me/push-token
+GET    /api/users/me/saved-stories
+```
 
-### Notifications (`/api/notifications`)
-- `GET /mine` - Get user's notifications
-- `GET /unread-count` - Get unread notification count
-- `GET /highlight` - Get unshown contributor highlight
-- `PATCH /:id/read` - Mark a notification as read
-- `PATCH /read-all` - Mark all notifications as read
+### News and social
 
-### Credits (`/api/credits`)
-- `GET /history` - Get user's credit history
+```text
+GET    /api/news
+GET    /api/news/:id
+POST   /api/news                       # admin direct publish
+PUT    /api/news/:id/like
+DELETE /api/news/:id/like
+PATCH  /api/news/:id/like              # legacy-compatible toggle route
+POST   /api/news/:id/save
+DELETE /api/news/:id/save
+GET    /api/news/:id/comments
+POST   /api/news/:id/comments
+DELETE /api/news/:id/comments/:commentId
+POST   /api/news/:id/report
+DELETE /api/news/:id                   # admin archive/soft-delete
+```
+
+### Submissions
+
+```text
+POST /api/submissions
+GET  /api/submissions/mine
+GET  /api/submissions/:id
+POST /api/submissions/:id/resubmit
+```
+
+### Admin
+
+```text
+GET   /api/admin/dashboard/stats
+GET   /api/admin/submissions
+GET   /api/admin/submissions/:id
+GET   /api/admin/submissions/:id/history
+PATCH /api/admin/submissions/:id/claim
+PATCH /api/admin/submissions/:id/approve
+PATCH /api/admin/submissions/:id/request-changes
+PATCH /api/admin/submissions/:id/reject
+GET   /api/admin/users
+GET   /api/admin/users/:id
+PATCH /api/admin/users/:id/status
+PATCH /api/admin/credits/adjust
+POST  /api/admin/users/:userId/credits
+GET   /api/admin/reports
+PATCH /api/admin/reports/:id
+GET   /api/admin/audit-logs
+POST  /api/admin/notifications/broadcast
+GET   /api/admin/settings
+PATCH /api/admin/settings
+```
+
+### Notifications and credits
+
+```text
+GET   /api/notifications/mine
+GET   /api/notifications/unread-count
+GET   /api/notifications/highlight
+PATCH /api/notifications/:id/read
+PATCH /api/notifications/read-all
+GET   /api/credits/history
+```
+
+## Notification delivery
+
+The backend first creates a durable in-app `Notification` record, then attempts Expo push delivery. Successful Expo tickets are stored in `PushDelivery`. A scheduled receipt worker processes Expo receipts and disables `PushToken` records when Expo reports `DeviceNotRegistered`.
+
+A successful Expo ticket means Expo accepted the message for processing; physical-device delivery still depends on valid EAS/APNs/FCM configuration and device permission state.
+
+## Scheduled jobs
+
+- Previous completed weekly contributor period — every Monday.
+- Previous completed calendar month contributor period — first day of each month.
+- Expo push receipt processing — every 15 minutes.
+
+## Operations
+
+Readiness endpoints:
+
+```text
+GET /api/health
+GET /api/ready
+```
+
+Run production on MongoDB Atlas (or another replica-set deployment) because the moderation and credit flows use MongoDB transactions.
+
+See the repository-level `PRODUCTION_UPGRADE_STATUS.md` for the exact verification that remains before deployment certification.

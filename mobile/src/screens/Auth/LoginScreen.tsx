@@ -25,7 +25,7 @@ export const LoginScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
@@ -59,9 +59,9 @@ export const LoginScreen = () => {
               onChangeText={setPassword}
               secureTextEntry
             />
-            
+
             <View style={styles.forgotPasswordContainer}>
-              <Text 
+              <Text
                 style={styles.forgotPasswordText}
                 onPress={() => navigation.navigate('ForgotPassword')}
               >
@@ -79,7 +79,7 @@ export const LoginScreen = () => {
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account? </Text>
-              <Text 
+              <Text
                 style={styles.linkText}
                 onPress={() => navigation.navigate('Register')}
               >

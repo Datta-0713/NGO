@@ -20,12 +20,16 @@ export interface NewsItem {
   location: string;
   date: string;
   category: 'Community' | 'Education' | 'Environment' | 'Health' | 'Events';
-  status: 'pending' | 'published' | 'rejected';
+  status: 'pending' | 'under_review' | 'needs_changes' | 'published' | 'rejected' | 'archived';
   submittedBy?: User;
   createdByAdmin: boolean;
   reviewedBy?: User;
   rejectionMessage?: string;
-  likes: string[];
+  likesCount: number;
+  commentsCount?: number;
+  liked?: boolean;
+  saved?: boolean;
+  claimedBy?: User;
   views: number;
   publishedAt?: string;
   createdAt: string;
@@ -56,6 +60,11 @@ export interface DashboardStats {
   pendingCount: number;
   totalContributors: number;
   totalCreditsAwarded: number;
+  totalUsers?: number;
+  underReviewCount?: number;
+  currentMonthSubmissions?: number;
+  previousMonthSubmissions?: number;
+  metricsChange?: { publishedNews?: number; submissions?: number; contributors?: number; monthOverMonthSubmissions?: number; };
   recentSubmissions: NewsItem[];
   submissionsLast30Days: Array<{ _id: string; count: number }>;
   needsAttentionData: {

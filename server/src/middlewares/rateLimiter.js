@@ -1,16 +1,14 @@
 'use strict';
 const rateLimit = require('express-rate-limit');
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 10,
-  message: { success: false, data: null, message: 'Too many requests from this IP, please try again after 15 minutes' }
-});
+const base = {
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  handler: (_req, res) => res.status(429).json({ success: false, data: null, message: 'Too many requests. Please try again later.' }),
+};
 
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 100,
-  message: { success: false, data: null, message: 'Too many requests from this IP, please try again after 15 minutes' }
-});
+const authLimiter = rateLimit({ ...base, windowMs: 15 * 60 * 1000, limit: 10 });
+const apiLimiter = rateLimit({ ...base, windowMs: 15 * 60 * 1000, limit: 300 });
+const mutationLimiter = rateLimit({ ...base, windowMs: 15 * 60 * 1000, limit: 100 });
 
-module.exports = { authLimiter, apiLimiter };
+module.exports = { authLimiter, apiLimiter, mutationLimiter };

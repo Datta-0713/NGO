@@ -37,10 +37,10 @@ const DashboardPage: React.FC = () => {
     <div className="flex flex-col gap-6">
       {/* Stat cards */}
       <div className="grid grid-cols-4 gap-5">
-        <StatCard title="Published News"   value={stats.publishedNewsCount}    icon={FileText} change={16} trendUp={true}  iconBg="bg-green-50"  iconColor="text-green-600" />
-        <StatCard title="Pending Review"   value={stats.pendingCount}          icon={Clock}    change={9}  trendUp={false} iconBg="bg-yellow-50" iconColor="text-yellow-600" />
-        <StatCard title="Contributors"     value={stats.totalContributors}     icon={Users}    change={18} trendUp={true}  iconBg="bg-blue-50"   iconColor="text-blue-600" />
-        <StatCard title="Credits Awarded"  value={stats.totalCreditsAwarded}   icon={Star}     change={22} trendUp={true}  iconBg="bg-purple-50" iconColor="text-purple-600" />
+        <StatCard title="Published News" value={stats.publishedNewsCount} icon={FileText} change={stats.metricsChange?.publishedNews ?? undefined} trendUp={(stats.metricsChange?.publishedNews ?? 0) >= 0} iconBg="bg-green-50" iconColor="text-green-600" />
+        <StatCard title="Pending Review" value={stats.pendingCount + (stats.underReviewCount ?? 0)} icon={Clock} change={undefined} trendUp={false} iconBg="bg-yellow-50" iconColor="text-yellow-600" />
+        <StatCard title="Contributors" value={stats.totalContributors} icon={Users} change={undefined} trendUp={true} iconBg="bg-blue-50" iconColor="text-blue-600" />
+        <StatCard title="Credits Awarded" value={stats.totalCreditsAwarded} icon={Star} change={undefined} trendUp={true} iconBg="bg-purple-50" iconColor="text-purple-600" />
       </div>
 
       {/* Body grid */}
@@ -68,7 +68,7 @@ const DashboardPage: React.FC = () => {
           <div className="mt-5 grid grid-cols-3 gap-2">
             {[
               { label: 'Total',    value: totalSubmissions },
-              { label: 'This Month', value: totalSubmissions },
+              { label: 'This Month', value: stats.currentMonthSubmissions ?? 0 },
               { label: 'Daily Avg', value: (totalSubmissions / 30).toFixed(1) },
             ].map(({ label, value }) => (
               <div key={label} className="text-center p-3 bg-gray-50 rounded-xl">

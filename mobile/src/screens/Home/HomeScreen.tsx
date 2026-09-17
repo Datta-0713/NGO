@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { fetchFeed, toggleLike } from '../../store/slices/feedSlice';
-import { getHighlightThunk } from '../../store/slices/notificationsSlice';
+import { getHighlightThunk, refreshUnreadCount } from '../../store/slices/notificationsSlice';
 import { Header } from '../../components/common/Header';
 import { NewsCard } from '../../components/news/NewsCard';
 import { LoadingSkeleton } from '../../components/common/LoadingSkeleton';
@@ -29,6 +29,7 @@ export const HomeScreen = () => {
   useEffect(() => {
     dispatch(fetchFeed({ page: 1, limit: 10 }));
     dispatch(getHighlightThunk());
+    dispatch(refreshUnreadCount());
   }, [dispatch]);
 
   const onRefresh = async () => {
@@ -44,7 +45,8 @@ export const HomeScreen = () => {
   };
 
   const handleLike = (id: string) => {
-    dispatch(toggleLike(id));
+    const item = items.find(i => i._id === id);
+    if (item) dispatch(toggleLike({ id, liked: !!item.liked }));
   };
 
   const renderHeader = () => {
@@ -97,7 +99,7 @@ export const HomeScreen = () => {
         rightIcon={<BellIcon />}
         onRightPress={() => navigation.navigate('Updates')}
       />
-      
+
       <FlatList
         data={items}
         keyExtractor={(item) => item._id}

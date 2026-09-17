@@ -10,12 +10,14 @@ import { formatDistanceToNow } from 'date-fns';
 import { useNavigation } from '@react-navigation/native';
 import { CategoryChip } from '../../components/news/CategoryChip';
 import { EmptyState } from '../../components/common/EmptyState';
+import { Ionicons } from '@expo/vector-icons';
 
 export const SearchScreen = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation<any>();
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   const categoryIcons: Record<string, string> = {
     Community: '👥',
@@ -25,22 +27,20 @@ export const SearchScreen = () => {
     Events: '📅'
   };
 
-  const handleSearch = async (text: string) => {
-    setQuery(text);
-    if (text.length > 2) {
+  const handleSearch = (text: string) => { setQuery(text); };
+
+  useEffect(() => {
+    let cancelled = false;
+    if (query.trim().length <= 2) { setResults([]); setLoading(false); return; }
+    const timer = setTimeout(async () => {
       setLoading(true);
-      try {
-        const response = await feedApi.getFeed({ page: 1, limit: 20, search: text });
-        setResults(response.news);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      setResults([]);
-    }
-  };
+      try { const response = await feedApi.getFeed({ page: 1, limit: 20, search: query.trim() }); if (!cancelled) setResults(response.news); }
+      catch (err) { if (!cancelled) console.error(err); }
+      finally { if (!cancelled) setLoading(false); }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [query]);
+
 
   const handleCategoryPress = async (category: string) => {
     setQuery(category);
@@ -55,8 +55,22 @@ export const SearchScreen = () => {
     }
   };
 
+
+  const toggleSave = async (item: NewsItem) => {
+    if (savingId) return;
+    setSavingId(item._id);
+    try {
+      const result = item.saved ? await feedApi.unsaveNews(item._id) : await feedApi.saveNews(item._id);
+      setResults(prev => prev.map(x => x._id === item._id ? { ...x, saved: result.saved } : x));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   const renderResultItem = ({ item }: { item: NewsItem }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.resultItem}
       onPress={() => navigation.navigate('NewsDetail', { id: item._id })}
     >
@@ -74,7 +88,7 @@ export const SearchScreen = () => {
           {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
         </Text>
       </View>
-      <Text style={styles.bookmarkIcon}>🔖</Text>
+      <TouchableOpacity onPress={() => toggleSave(item)} disabled={savingId === item._id} style={styles.bookmarkButton}><Ionicons name={item.saved ? 'bookmark' : 'bookmark-outline'} size={21} color={item.saved ? Colors.primary : Colors.textLight} /></TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -92,7 +106,7 @@ export const SearchScreen = () => {
             autoFocus
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearch('')}>
+            <TouchableOpacity onPress={() => setQuery('')}>
               <Text style={styles.clearIcon}>✕</Text>
             </TouchableOpacity>
           )}
@@ -104,11 +118,11 @@ export const SearchScreen = () => {
           <Text style={styles.sectionTitle}>Suggested Topics</Text>
           <View style={styles.chipGrid}>
             {Config.CATEGORIES.map(cat => (
-              <CategoryChip 
-                key={cat} 
-                label={cat} 
-                icon={categoryIcons[cat]} 
-                onPress={() => handleCategoryPress(cat)} 
+              <CategoryChip
+                key={cat}
+                label={cat}
+                icon={categoryIcons[cat]}
+                onPress={() => handleCategoryPress(cat)}
               />
             ))}
           </View>

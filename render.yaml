@@ -2,17 +2,18 @@ services:
   - type: web
     name: nexy-foundation-api
     env: node
-    plan: free
+    plan: starter
     rootDir: server
-    buildCommand: npm install
+    buildCommand: npm ci
     startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
       - key: MONGO_URI
-        value: mongodb+srv://dipanjandatta3020_db_user:hkrY38DA320YGBDW@cluster0.8leacp9.mongodb.net/nexy-foundation?retryWrites=true&w=majority&appName=Cluster0
+        sync: false
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
@@ -22,16 +23,20 @@ services:
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
       - key: CLOUDINARY_CLOUD_NAME
-        value: Root
+        sync: false
       - key: CLOUDINARY_API_KEY
-        value: 129732256919226
+        sync: false
       - key: CLOUDINARY_API_SECRET
-        value: qmwfBAByPUpW797nOmlPMekz2OQ
+        sync: false
+      - key: EXPO_ACCESS_TOKEN
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
       - key: DEFAULT_CREDIT_AMOUNT
         value: 10
       - key: WELCOME_BONUS_CREDITS
         value: 5
       - key: CLIENT_URL
-        value: '*' # Update this to your Vercel URL once deployed
+        sync: false
       - key: MOBILE_URL
-        value: '*' # Expo allows all in prod typically, or restrict if needed
+        sync: false

@@ -1,4 +1,12 @@
 'use strict';
+
+process.env.NODE_ENV = 'test';
+process.env.MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/asian-news-bureau-test';
+process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'test-access-secret-should-never-be-used-in-production';
+process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret-should-never-be-used-in-production';
+process.env.CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'test';
+process.env.CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || 'test';
+process.env.CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || 'test';
 /**
  * Server smoke tests — basic API contract checks.
  * These run without a real DB (mocked). They verify that routes

@@ -15,7 +15,7 @@ interface UserDetailModalProps {
 
 export const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose }) => {
   const [adjustOpen, setAdjustOpen] = useState(false);
-  const [form, setForm] = useState({ amount: '', reason: '' });
+  const [form, setForm] = useState({ amount: '', reason: '', action: 'credit' as 'credit' | 'debit' });
   const [adjusting, setAdjusting] = useState(false);
   const [adjustError, setAdjustError] = useState('');
   const [adjustSuccess, setAdjustSuccess] = useState(false);
@@ -29,10 +29,10 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose 
     setAdjusting(true);
     setAdjustError('');
     try {
-      const result = await creditsApi.adjustCredits(user._id, Number(form.amount), form.reason);
-      setCurrentCredits(result?.data?.user?.credits ?? currentCredits + Number(form.amount));
+      const result = await creditsApi.adjustCredits(user._id, Number(form.amount), form.reason, form.action);
+      setCurrentCredits(result?.data?.user?.credits ?? currentCredits + (form.action === 'credit' ? Math.abs(Number(form.amount)) : -Math.abs(Number(form.amount))));
       setAdjustSuccess(true);
-      setForm({ amount: '', reason: '' });
+      setForm({ amount: '', reason: '', action: 'credit' });
       setTimeout(() => { setAdjustOpen(false); setAdjustSuccess(false); }, 1500);
     } catch (e: any) {
       setAdjustError(e?.response?.data?.message || 'Failed to adjust credits.');
@@ -109,10 +109,14 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose 
                   {adjustError}
                 </div>
               )}
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setForm(f => ({...f, action: 'credit'}))} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${form.action === 'credit' ? 'border-primary bg-primary-xlight text-primary' : 'border-gray-200 text-gray-500'}`}>Credit</button>
+                <button type="button" onClick={() => setForm(f => ({...f, action: 'debit'}))} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${form.action === 'debit' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-200 text-gray-500'}`}>Debit</button>
+              </div>
               <Input
-                label="Amount (use negative to deduct)"
+                label="Amount"
                 type="number"
-                placeholder="e.g. 10 or -5"
+                placeholder="e.g. 10"
                 value={form.amount}
                 onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
               />

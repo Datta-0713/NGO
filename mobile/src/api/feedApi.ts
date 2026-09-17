@@ -1,48 +1,51 @@
 import { api } from './axios';
-import type { NewsItem, ApiResponse } from '../types';
+import type { NewsItem, ApiResponse, Comment } from '../types';
 
 interface FeedPage {
   news: NewsItem[];
   total: number;
   page: number;
+  limit: number;
   totalPages: number;
 }
 
 export const feedApi = {
-  /** GET /api/news — public paginated feed of published stories */
   getFeed: async (params: { page: number; limit: number; category?: string; search?: string }) => {
     const response = await api.get<ApiResponse<FeedPage>>('/news', { params });
-    // response.data = ApiResponse → response.data.data = { news, total, page, totalPages }
     return response.data.data;
   },
-
-  /** GET /api/news/:id — single story with view count increment */
   getNewsById: async (id: string) => {
     const response = await api.get<ApiResponse<{ news: NewsItem }>>(`/news/${id}`);
     return response.data.data;
   },
-
-  /** PATCH /api/news/:id/like — toggle like */
-  likeNews: async (id: string) => {
-    const response = await api.patch<ApiResponse<{ likesCount: number; liked: boolean }>>(`/news/${id}/like`);
+  setLike: async (id: string) => {
+    const response = await api.put<ApiResponse<{ likesCount: number; liked: boolean }>>(`/news/${id}/like`);
     return response.data.data;
   },
-
-  /** GET /api/news/:id/comments */
+  removeLike: async (id: string) => {
+    const response = await api.delete<ApiResponse<{ likesCount: number; liked: boolean }>>(`/news/${id}/like`);
+    return response.data.data;
+  },
+  saveNews: async (id: string) => {
+    const response = await api.put<ApiResponse<{ saved: boolean }>>(`/news/${id}/save`);
+    return response.data.data;
+  },
+  unsaveNews: async (id: string) => {
+    const response = await api.delete<ApiResponse<{ saved: boolean }>>(`/news/${id}/save`);
+    return response.data.data;
+  },
+  getSavedNews: async (params: { page: number; limit: number }) => {
+    const response = await api.get<ApiResponse<FeedPage>>('/news/saved/mine', { params });
+    return response.data.data;
+  },
   getComments: async (newsId: string) => {
-    const response = await api.get<ApiResponse<{ comments: import('../types').Comment[]; total: number }>>(`/news/${newsId}/comments`);
+    const response = await api.get<ApiResponse<{ comments: Comment[]; total: number }>>(`/news/${newsId}/comments`);
     return response.data.data;
   },
-
-  /** POST /api/news/:id/comments */
   addComment: async (newsId: string, text: string) => {
-    const response = await api.post<ApiResponse<{ comment: import('../types').Comment; commentsCount: number }>>(
-      `/news/${newsId}/comments`, { text }
-    );
+    const response = await api.post<ApiResponse<{ comment: Comment; commentsCount: number }>>(`/news/${newsId}/comments`, { text });
     return response.data.data;
   },
-
-  /** DELETE /api/news/:id/comments/:commentId */
   deleteComment: async (newsId: string, commentId: string) => {
     const response = await api.delete<ApiResponse<{ commentsCount: number }>>(`/news/${newsId}/comments/${commentId}`);
     return response.data.data;

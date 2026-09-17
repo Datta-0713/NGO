@@ -32,6 +32,22 @@ export const fetchSubmissions = createAsyncThunk(
   }
 );
 
+export const claimSubmission = createAsyncThunk(
+  'submissions/claim',
+  async (id: string, { rejectWithValue }) => {
+    try { const res = await api.claimSubmission(id); return res.data as { news: NewsItem }; }
+    catch (err: any) { return rejectWithValue(err.response?.data?.message || 'Failed to claim submission'); }
+  }
+);
+
+export const requestChanges = createAsyncThunk(
+  'submissions/requestChanges',
+  async ({ id, msg }: { id: string; msg: string }, { rejectWithValue }) => {
+    try { const res = await api.requestChanges(id, msg); return res.data as { news: NewsItem }; }
+    catch (err: any) { return rejectWithValue(err.response?.data?.message || 'Failed to request changes'); }
+  }
+);
+
 export const approveSubmission = createAsyncThunk(
   'submissions/approve',
   async (id: string, { rejectWithValue }) => {
@@ -82,6 +98,16 @@ const submissionsSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+      .addCase(claimSubmission.fulfilled, (state, action) => {
+        const updated = action.payload?.news;
+        if (updated) { const idx = state.items.findIndex((i) => i._id === updated._id); if (idx !== -1) state.items[idx] = updated; state.selectedSubmission = updated; }
+      })
+      .addCase(claimSubmission.rejected, (state, action) => { state.error = action.payload as string; })
+      .addCase(requestChanges.fulfilled, (state, action) => {
+        const updated = action.payload?.news;
+        if (updated) { const idx = state.items.findIndex((i) => i._id === updated._id); if (idx !== -1) state.items[idx] = updated; state.selectedSubmission = updated; }
+      })
+      .addCase(requestChanges.rejected, (state, action) => { state.error = action.payload as string; })
       .addCase(approveSubmission.fulfilled, (state, action) => {
         const updated = action.payload?.news;
         if (updated) {

@@ -15,6 +15,8 @@ import { useDebounce } from '@/hooks/useDebounce';
 const STATUS_TABS = [
   { label: 'All',       value: '' },
   { label: 'Pending',   value: 'pending' },
+  { label: 'Reviewing', value: 'under_review' },
+  { label: 'Changes Needed', value: 'needs_changes' },
   { label: 'Published', value: 'published' },
   { label: 'Rejected',  value: 'rejected' },
 ];

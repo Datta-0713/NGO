@@ -10,7 +10,7 @@
  * Will NOT create a duplicate if the email already exists.
  */
 
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config();
 
 const mongoose = require('mongoose');
 const readline = require('readline');

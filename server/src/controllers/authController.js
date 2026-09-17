@@ -3,160 +3,172 @@ const User = require('../models/User');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendSuccess } = require('../utils/apiResponse');
-const { generateTokens, verifyRefreshToken } = require('../middlewares/auth');
+const { generateAccessToken } = require('../middlewares/auth');
 const creditService = require('../services/creditService');
+const sessionService = require('../services/sessionService');
+const { withTransaction } = require('../utils/dbTransaction');
 const crypto = require('crypto');
 const sendEmail = require('../utils/email');
 
+const sessionMetadata = (req) => ({
+  userAgent: req.get('user-agent') || '',
+  deviceId: req.get('x-device-id') || '',
+});
+
+const issueAuthResponse = async (res, user, sessionInfo, statusCode = 200, message = 'Login successful') => {
+  const accessToken = generateAccessToken(user._id);
+  const userResponse = user.toJSON();
+  return sendSuccess(res, statusCode, {
+    user: userResponse,
+    accessToken,
+    refreshToken: sessionInfo.refreshToken,
+  }, message);
+};
+
 const register = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
-  const userExists = await User.findOne({ email });
-  if (userExists) {
-    throw new AppError('Email already in use', 400);
-  }
+  const normalizedEmail = email.toLowerCase().trim();
 
-  const user = await User.create({ name, email, passwordHash: password });
+  const result = await withTransaction(async (session) => {
+    const existing = await User.findOne({ email: normalizedEmail }).session(session);
+    if (existing) throw new AppError('Email already in use', 409);
 
-  // Award welcome bonus and get the updated user with correct credit balance
-  const updatedUser = await creditService.awardWelcomeBonus(user._id);
+    const docs = await User.create([{ name: name.trim(), email: normalizedEmail, passwordHash: password }], { session });
+    const user = docs[0];
+    await creditService.awardWelcomeBonus(user._id, { session });
+    const sessionInfo = await sessionService.createSession(user._id, sessionMetadata(req), session);
+    const refreshedUser = await User.findById(user._id).session(session);
+    return { user: refreshedUser, sessionInfo };
+  });
 
-  const { accessToken, refreshToken } = generateTokens(user._id);
-  sendSuccess(res, 201, { user: updatedUser.toJSON(), accessToken, refreshToken }, 'Registration successful');
+  return issueAuthResponse(res, result.user, result.sessionInfo, 201, 'Registration successful');
 });
 
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   const user = await User.findByEmail(email);
-  
+
   if (!user || !(await user.comparePassword(password))) {
     throw new AppError('Invalid email or password', 401);
   }
-  if (!user.isActive) {
-    throw new AppError('Account is deactivated', 401);
-  }
+  if (!user.isActive) throw new AppError('Account is deactivated', 401);
 
-  const { accessToken, refreshToken } = generateTokens(user._id);
-  const userResponse = user.toJSON();
-  sendSuccess(res, 200, { user: userResponse, accessToken, refreshToken }, 'Login successful');
+  const sessionInfo = await sessionService.createSession(user._id, sessionMetadata(req));
+  return issueAuthResponse(res, user, sessionInfo);
 });
 
 const refreshToken = asyncHandler(async (req, res) => {
-  const { token } = req.body;
-  if (!token) throw new AppError('Refresh token required', 400);
+  const refreshTokenValue = req.body.refreshToken || req.body.token;
+  if (!refreshTokenValue) throw new AppError('Refresh token required', 400);
 
-  const decoded = verifyRefreshToken(token);
-  const user = await User.findById(decoded.id);
-  if (!user || !user.isActive) throw new AppError('Invalid or expired refresh token', 401);
+  const rotated = await sessionService.rotateSession(refreshTokenValue, sessionMetadata(req));
+  const user = await User.findById(rotated.userId);
+  if (!user || !user.isActive) {
+    await sessionService.revokeAllUserSessions(rotated.userId);
+    throw new AppError('Invalid or expired refresh token', 401);
+  }
 
-  const tokens = generateTokens(user._id);
-  sendSuccess(res, 200, tokens, 'Token refreshed');
+  return issueAuthResponse(res, user, { refreshToken: rotated.refreshToken }, 200, 'Token refreshed');
 });
 
 const logout = asyncHandler(async (req, res) => {
+  const refreshTokenValue = req.body.refreshToken || req.body.token || null;
+  await sessionService.revokeSession(refreshTokenValue);
   sendSuccess(res, 200, null, 'Logged out successfully');
 });
 
 const getMe = asyncHandler(async (req, res) => {
-  sendSuccess(res, 200, { user: req.user });
+  sendSuccess(res, 200, { user: req.user.toJSON() });
 });
 
 const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) {
-    // Return success even if user not found to prevent email enumeration
-    return sendSuccess(res, 200, null, 'If that email is registered, we have sent a reset link.');
-  }
+  const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+resetPasswordToken +resetPasswordExpires');
+  const generic = 'If that email is registered, we have sent a reset link.';
+  if (!user) return sendSuccess(res, 200, null, generic);
 
   const resetToken = crypto.randomBytes(32).toString('hex');
-  const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
-
-  user.resetPasswordToken = resetTokenHash;
-  user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000);
   await user.save({ validateBeforeSave: false });
 
-  // Mobile apps will intercept a deep link like nexyfoundation://reset-password?token=...
-  // but since we are doing a generic approach, we'll construct a mock reset URL or deep link
   const resetUrl = `asiannewsbureau://reset-password/${resetToken}`;
-
-  const message = `Forgot your password? Click here to reset it:\n${resetUrl}\nIf you didn't request this, please ignore this email.`;
+  const message = `Forgot your password? Open this link to reset it:\n${resetUrl}\n\nThis link expires in 10 minutes. If you didn't request this, you can ignore this email.`;
 
   try {
     await sendEmail({
       to: user.email,
-      subject: 'Your password reset token (valid for 10 min)',
-      text: message
+      subject: 'Reset your Asian News Bureau password',
+      text: message,
     });
-
-    sendSuccess(res, 200, null, 'If that email is registered, we have sent a reset link.');
-  } catch (err) {
+  } catch (error) {
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save({ validateBeforeSave: false });
-    console.error('[ForgotPassword] Email send failed:', err.message);
-    throw new AppError('Could not send the reset email. Please check your email address and try again.', 500);
+    throw new AppError('Could not send the reset email. Please try again later.', 500);
   }
+
+  return sendSuccess(res, 200, null, generic);
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
   const resetTokenHash = crypto.createHash('sha256').update(req.params.token).digest('hex');
-
   const user = await User.findOne({
     resetPasswordToken: resetTokenHash,
-    resetPasswordExpires: { $gt: Date.now() }
+    resetPasswordExpires: { $gt: new Date() },
+  }).select('+resetPasswordToken +resetPasswordExpires +passwordHash');
+  if (!user) throw new AppError('Token is invalid or has expired', 400);
+
+  await withTransaction(async (session) => {
+    user.passwordHash = req.body.password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save({ session });
+    await sessionService.revokeAllUserSessions(user._id, session);
   });
 
-  if (!user) {
-    throw new AppError('Token is invalid or has expired', 400);
-  }
-
-  user.passwordHash = req.body.password;
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpires = undefined;
-  await user.save();
-
-  sendSuccess(res, 200, null, 'Password reset successful');
+  sendSuccess(res, 200, null, 'Password reset successful. Please log in again.');
 });
 
 const googleLogin = asyncHandler(async (req, res) => {
   const { idToken } = req.body;
   if (!idToken) throw new AppError('Google ID token is required', 400);
+  if (!process.env.GOOGLE_CLIENT_ID) throw new AppError('Google sign-in is not configured on this server', 503);
 
   const { OAuth2Client } = require('google-auth-library');
-  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || 'PLACEHOLDER_FOR_NOW');
+  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+  let payload;
   try {
-    const ticket = await client.verifyIdToken({
-      idToken,
-      audience: process.env.GOOGLE_CLIENT_ID || 'PLACEHOLDER_FOR_NOW',
-    });
-    const payload = ticket.getPayload();
-    const { email, name, picture } = payload;
-
-    let user = await User.findByEmail(email);
-    
-    if (!user) {
-      user = await User.create({
-        name,
-        email,
-        passwordHash: crypto.randomBytes(16).toString('hex'),
-        profilePhoto: picture,
-        isActive: true
-      });
-      // Award welcome bonus for new google users
-      user = await creditService.awardWelcomeBonus(user._id);
-    }
-
-    if (!user.isActive) {
-      throw new AppError('Account is deactivated', 401);
-    }
-
-    const { accessToken, refreshToken } = generateTokens(user._id);
-    sendSuccess(res, 200, { user: user.toJSON(), accessToken, refreshToken }, 'Login successful');
-  } catch (err) {
-    console.error('Google auth error:', err);
+    const ticket = await client.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
+    payload = ticket.getPayload();
+  } catch (_) {
     throw new AppError('Invalid Google token', 401);
   }
+
+  if (!payload?.email || payload.email_verified !== true) throw new AppError('Google account email is not verified', 401);
+  const email = payload.email.toLowerCase().trim();
+  let user = await User.findOne({ email });
+
+  if (!user) {
+    const result = await withTransaction(async (session) => {
+      const docs = await User.create([{
+        name: payload.name || email.split('@')[0],
+        email,
+        passwordHash: crypto.randomBytes(32).toString('hex'),
+        profilePhoto: payload.picture || '',
+      }], { session });
+      const createdUser = docs[0];
+      await creditService.awardWelcomeBonus(createdUser._id, { session });
+      const refreshedUser = await User.findById(createdUser._id).session(session);
+      return refreshedUser;
+    });
+    user = result;
+  }
+  if (!user.isActive) throw new AppError('Account is deactivated', 401);
+
+  const sessionInfo = await sessionService.createSession(user._id, sessionMetadata(req));
+  return issueAuthResponse(res, user, sessionInfo);
 });
 
 module.exports = { register, login, refreshToken, logout, getMe, forgotPassword, resetPassword, googleLogin };

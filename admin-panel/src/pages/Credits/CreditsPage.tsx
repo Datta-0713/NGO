@@ -11,7 +11,7 @@ import { usePagination } from '@/hooks/usePagination';
 
 const CreditsPage: React.FC = () => {
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
-  const [adjustForm, setAdjustForm] = useState({ userId: '', amount: '', reason: '' });
+  const [adjustForm, setAdjustForm] = useState({ userId: '', amount: '', reason: '', action: 'credit' as 'credit' | 'debit' });
   const [adjusting, setAdjusting] = useState(false);
   const [adjustSuccess, setAdjustSuccess] = useState(false);
   const [adjustError, setAdjustError] = useState('');
@@ -49,9 +49,9 @@ const CreditsPage: React.FC = () => {
     setAdjusting(true);
     setAdjustError('');
     try {
-      await creditsApi.adjustCredits(adjustForm.userId, Number(adjustForm.amount), adjustForm.reason);
+      await creditsApi.adjustCredits(adjustForm.userId, Number(adjustForm.amount), adjustForm.reason, adjustForm.action);
       setAdjustSuccess(true);
-      setAdjustForm({ userId: '', amount: '', reason: '' });
+      setAdjustForm({ userId: '', amount: '', reason: '', action: 'credit' });
       fetchTransactions();
       setTimeout(() => { setAdjustModalOpen(false); setAdjustSuccess(false); }, 1500);
     } catch (e: any) {
@@ -172,7 +172,11 @@ const CreditsPage: React.FC = () => {
             </div>
           )}
           <Input label="User ID" placeholder="MongoDB ObjectId of user" value={adjustForm.userId} onChange={e => setAdjustForm(f => ({...f, userId: e.target.value}))} />
-          <Input label="Amount" type="number" placeholder="e.g. 10 or -5" value={adjustForm.amount} onChange={e => setAdjustForm(f => ({...f, amount: e.target.value}))} />
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setAdjustForm(f => ({...f, action: 'credit'}))} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${adjustForm.action === 'credit' ? 'border-primary bg-primary-xlight text-primary' : 'border-gray-200 text-gray-500'}`}>Credit</button>
+            <button type="button" onClick={() => setAdjustForm(f => ({...f, action: 'debit'}))} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${adjustForm.action === 'debit' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-200 text-gray-500'}`}>Debit</button>
+          </div>
+          <Input label="Amount" type="number" placeholder="e.g. 10" value={adjustForm.amount} onChange={e => setAdjustForm(f => ({...f, amount: e.target.value}))} />
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-gray-700">Reason</label>
             <textarea

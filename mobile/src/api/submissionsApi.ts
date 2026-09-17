@@ -5,22 +5,29 @@ interface SubmissionsPaginatedResponse {
   submissions: NewsItem[];
   total: number;
   page: number;
+  limit: number;
   totalPages: number;
 }
 
 export const submissionsApi = {
-  /** POST /api/submissions — submit a news story with optional media
-   *  NOTE: Do NOT set Content-Type manually. Axios auto-generates
-   *  the correct 'multipart/form-data; boundary=XXX' header for FormData.
-   */
   submitNews: async (formData: FormData) => {
     const response = await api.post<ApiResponse<{ news: NewsItem }>>('/submissions', formData);
     return response.data;
   },
-
-  /** GET /api/submissions/mine — get current user's own submissions */
-  getMySubmissions: async (params: { page: number; limit: number }) => {
+  getMySubmissions: async (params: { page: number; limit: number; status?: string }) => {
     const response = await api.get<ApiResponse<SubmissionsPaginatedResponse>>('/submissions/mine', { params });
+    return response.data;
+  },
+  getMySubmission: async (id: string) => {
+    const response = await api.get<ApiResponse<{ news: NewsItem }>>(`/submissions/${id}`);
+    return response.data.data;
+  },
+  getHistory: async (id: string) => {
+    const response = await api.get<ApiResponse<{ revisions: Array<NewsItem & { revisionNumber: number; changeNote: string; author: any }> }>>(`/submissions/${id}/history`);
+    return response.data.data;
+  },
+  resubmitNews: async (id: string, formData: FormData) => {
+    const response = await api.patch<ApiResponse<{ news: NewsItem }>>(`/submissions/${id}/resubmit`, formData);
     return response.data;
   },
 };

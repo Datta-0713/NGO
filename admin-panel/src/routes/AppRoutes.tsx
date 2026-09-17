@@ -9,6 +9,8 @@ import UsersPage from '@/pages/Users/UsersPage';
 import CreditsPage from '@/pages/Credits/CreditsPage';
 import NotificationsPage from '@/pages/Notifications/NotificationsPage';
 import SettingsPage from '@/pages/Settings/SettingsPage';
+import ReportsPage from '@/pages/Reports/ReportsPage';
+import AuditLogsPage from '@/pages/Audit/AuditLogsPage';
 
 const AppRoutes = () => {
   return (
@@ -22,6 +24,8 @@ const AppRoutes = () => {
         <Route path="/credits" element={<CreditsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/audit" element={<AuditLogsPage />} />
       </Route>
     </Routes>
   );

@@ -1,49 +1,62 @@
 'use strict';
 const mongoose = require('mongoose');
 
+const mediaSchema = new mongoose.Schema({
+  url: { type: String, required: true },
+  type: { type: String, enum: ['image', 'video'], required: true },
+  publicId: { type: String, required: true },
+  thumbnailUrl: { type: String },
+}, { _id: false });
+
 const newsSchema = new mongoose.Schema({
-  title: { type: String, required: true, trim: true, maxlength: 200 },
-  description: { type: String, required: true, maxlength: 5000 },
-  media: [{
-    url: String,
-    type: { type: String, enum: ['image', 'video'] },
-    publicId: String
-  }],
-  location: { type: String, required: true },
+  title: { type: String, required: true, trim: true, minlength: 10, maxlength: 200 },
+  description: { type: String, required: true, trim: true, minlength: 20, maxlength: 5000 },
+  media: { type: [mediaSchema], default: [] },
+  location: { type: String, required: true, trim: true, maxlength: 150 },
   date: { type: Date, required: true },
   category: { type: String, required: true, enum: ['Community', 'Education', 'Environment', 'Health', 'Events'] },
-  status: { type: String, enum: ['pending', 'published', 'rejected'], default: 'pending' },
-  submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
-  createdByAdmin: { type: Boolean, default: false },
-  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  adminNotes: { type: String, select: false },
-  rejectionMessage: { type: String, default: '' },
-  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  comments: [{
-    _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    text: { type: String, required: true, maxlength: 1000, trim: true },
-    createdAt: { type: Date, default: Date.now }
-  }],
-  views: { type: Number, default: 0 },
+  status: { type: String, enum: ['pending', 'under_review', 'needs_changes', 'published', 'rejected', 'archived'], default: 'pending', index: true },
+  submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+  createdByAdmin: { type: Boolean, default: false, index: true },
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  reviewedAt: { type: Date, default: null },
+  claimedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  claimedAt: { type: Date, default: null },
+  adminNotes: { type: String, select: false, maxlength: 5000, default: '' },
+  rejectionMessage: { type: String, default: '', maxlength: 1000 },
+  sourceUrl: { type: String, default: '', maxlength: 1000, trim: true },
+  evidenceNotes: { type: String, default: '', maxlength: 2000, select: false },
+  geo: {
+    lat: { type: Number, min: -90, max: 90 },
+    lng: { type: Number, min: -180, max: 180 },
+  },
+  views: { type: Number, default: 0, min: 0 },
   publishedAt: { type: Date },
-  reports: [{
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    reason: { type: String, default: 'Inappropriate content' },
-    createdAt: { type: Date, default: Date.now }
-  }]
+  deletedAt: { type: Date, default: null, index: true },
+  deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  // Legacy embedded social data. Kept for one-time migration only and never returned by normal API responses.
+  likes: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], select: false, default: undefined },
+  comments: { type: [mongoose.Schema.Types.Mixed], select: false, default: undefined },
+  reports: { type: [mongoose.Schema.Types.Mixed], select: false, default: undefined },
 }, {
   timestamps: true,
-  toJSON: { virtuals: true },
+  toJSON: {
+    virtuals: true,
+    transform: (doc, ret) => {
+      delete ret.likes;
+      delete ret.comments;
+      delete ret.reports;
+      delete ret.adminNotes;
+      delete ret.evidenceNotes;
+      return ret;
+    }
+  },
   toObject: { virtuals: true }
 });
 
-newsSchema.virtual('likesCount').get(function () {
-  return this.likes ? this.likes.length : 0;
-});
+newsSchema.index({ status: 1, deletedAt: 1, publishedAt: -1 });
+newsSchema.index({ submittedBy: 1, createdAt: -1 });
+newsSchema.index({ title: 'text', description: 'text', location: 'text' });
+newsSchema.index({ category: 1, status: 1, publishedAt: -1 });
 
-newsSchema.index({ status: 1, category: 1, publishedAt: -1 });
-newsSchema.index({ title: 'text', description: 'text' });
-
-const News = mongoose.model('News', newsSchema);
-module.exports = News;
+module.exports = mongoose.model('News', newsSchema);

@@ -23,10 +23,10 @@ export const ForgotPasswordScreen = () => {
       setError('Please enter your email address');
       return;
     }
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       await api.post('/auth/forgot-password', { email });
       setSuccess(true);
@@ -58,7 +58,7 @@ export const ForgotPasswordScreen = () => {
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
-        
+
         {success ? (
           <View style={styles.successContainer}>
             <Ionicons name="checkmark-circle" size={48} color={Colors.primary} />

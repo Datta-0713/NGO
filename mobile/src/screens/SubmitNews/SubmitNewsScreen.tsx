@@ -34,6 +34,7 @@ export const SubmitNewsScreen = () => {
   const [location, setLocation]       = useState('');
   const [date, setDate]               = useState(new Date().toISOString().split('T')[0]);
   const [category, setCategory]       = useState<string>('Community');
+  const [sourceUrl, setSourceUrl]     = useState('');
 
   const dispatch   = useAppDispatch();
   const { submitting } = useAppSelector(state => state.submissions);
@@ -64,7 +65,7 @@ export const SubmitNewsScreen = () => {
         uri: asset.uri,
         type: isVid ? 'video' : 'image',
         name: asset.fileName || `media_${Date.now()}.${ext}`,
-        mimeType: isVid ? `video/${ext}` : `image/${ext}`,
+        mimeType: asset.mimeType || (isVid ? 'video/mp4' : 'image/jpeg'),
       };
     });
 
@@ -92,6 +93,7 @@ export const SubmitNewsScreen = () => {
     formData.append('location',    location.trim());
     formData.append('date',        new Date(date).toISOString());
     formData.append('category',    category);
+    if (sourceUrl.trim()) formData.append('sourceUrl', sourceUrl.trim());
 
     // Append each media file — React Native FormData needs uri/name/type object
     mediaAssets.forEach(asset => {
@@ -101,6 +103,11 @@ export const SubmitNewsScreen = () => {
         type: asset.mimeType,
       } as any);
     });
+
+    if (sourceUrl.trim() && !/^https?:\/\//i.test(sourceUrl.trim())) {
+      Alert.alert('Invalid source URL', 'Please enter a full URL beginning with http:// or https://.');
+      return;
+    }
 
     try {
       await dispatch(submitNewsThunk(formData)).unwrap();
@@ -146,7 +153,7 @@ export const SubmitNewsScreen = () => {
               </TouchableOpacity>
             )}
           </View>
-          <Text style={styles.mediaHint}>JPG · PNG · MP4 · MOV · up to 50 MB each</Text>
+          <Text style={styles.mediaHint}>JPG · PNG · MP4 · MOV · up to 30 MB each</Text>
 
           {/* ── Form Fields ── */}
           <View style={styles.formSection}>
@@ -176,6 +183,15 @@ export const SubmitNewsScreen = () => {
               placeholder="City, Area or Address"
               value={location}
               onChangeText={setLocation}
+            />
+
+            <Input
+              label="Source URL (optional)"
+              placeholder="https://example.org/source"
+              value={sourceUrl}
+              onChangeText={setSourceUrl}
+              autoCapitalize="none"
+              keyboardType="url"
             />
 
             <Input

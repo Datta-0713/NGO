@@ -13,16 +13,35 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+let refreshPromise: Promise<string> | null = null;
+
+const refreshAccessToken = async (): Promise<string> => {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) throw new Error('No refresh token available');
+    const res = await axios.post(`${api.defaults.baseURL}/auth/refresh-token`, { refreshToken });
+    const accessToken = res.data.data.accessToken;
+    const nextRefreshToken = res.data.data.refreshToken;
+    localStorage.setItem('accessToken', accessToken);
+    if (nextRefreshToken) localStorage.setItem('refreshToken', nextRefreshToken);
+    return accessToken;
+  })().finally(() => { refreshPromise = null; });
+  return refreshPromise;
+};
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const originalRequest = error.config || {};
+    const requestUrl = String(originalRequest.url || '');
+    const isAuthRoute = /\/auth\/(login|register|refresh-token|forgot-password|reset-password)/.test(requestUrl);
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        const res = await axios.post(`${api.defaults.baseURL}/auth/refresh-token`, { token: refreshToken });
-        localStorage.setItem('accessToken', res.data.data.accessToken);
+        const accessToken = await refreshAccessToken();
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (err) {
         localStorage.removeItem('accessToken');

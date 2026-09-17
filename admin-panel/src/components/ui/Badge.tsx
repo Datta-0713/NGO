@@ -1,11 +1,14 @@
 import React from 'react';
 
-type BadgeVariant = 'published' | 'pending' | 'rejected' | 'admin' | 'user' | 'default';
+type BadgeVariant = 'published' | 'pending' | 'under_review' | 'needs_changes' | 'rejected' | 'archived' | 'admin' | 'user' | 'default';
 
 const STYLES: Record<BadgeVariant, string> = {
   published: 'bg-green-100 text-green-700 border border-green-200',
   pending:   'bg-yellow-100 text-yellow-700 border border-yellow-200',
+  under_review: 'bg-blue-100 text-blue-700 border border-blue-200',
+  needs_changes: 'bg-orange-100 text-orange-700 border border-orange-200',
   rejected:  'bg-red-100 text-red-600 border border-red-200',
+  archived:  'bg-gray-200 text-gray-700 border border-gray-300',
   admin:     'bg-purple-100 text-purple-700 border border-purple-200',
   user:      'bg-gray-100 text-gray-600 border border-gray-200',
   default:   'bg-gray-100 text-gray-500 border border-gray-200',

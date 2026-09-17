@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, CheckSquare, Users, Coins, Bell, Settings, Leaf, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, CheckSquare, Users, Coins, Bell, Settings, Leaf, LogOut, Flag, ScrollText } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '@/store';
 import { logout } from '@/store/slices/authSlice';
@@ -12,6 +12,8 @@ const NAV_ITEMS = [
   { icon: Users,           label: 'Users',        path: '/users',        end: false },
   { icon: Coins,           label: 'Credits',      path: '/credits',      end: false },
   { icon: Bell,            label: 'Notifications',path: '/notifications',end: false },
+  { icon: Flag,            label: 'Reports',      path: '/reports',      end: false },
+  { icon: ScrollText,      label: 'Audit Log',    path: '/audit',        end: false },
   { icon: Settings,        label: 'Settings',     path: '/settings',     end: false },
 ];
 
@@ -33,8 +35,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     <>
       {/* Mobile overlay */}
       {isOpen && (
-        <div 
-          className="fixed inset-0 bg-gray-900/50 z-40 md:hidden" 
+        <div
+          className="fixed inset-0 bg-gray-900/50 z-40 md:hidden"
           onClick={onClose}
         />
       )}
