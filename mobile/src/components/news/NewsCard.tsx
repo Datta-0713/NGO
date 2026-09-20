@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Share, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Share, Alert, FlatList, Modal } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
@@ -25,14 +25,23 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
   const timeAgo = dateObj && isValid(dateObj)
     ? formatDistanceToNow(dateObj, { addSuffix: true })
     : '';
-  const firstMedia = item.media?.[0];
   const isLiked = Boolean(item.liked);
   const [saved, setSaved] = useState(Boolean(item.saved));
   const [saving, setSaving] = useState(false);
   const likesCount = item.likesCount ?? 0;
   const author = item.submittedBy;
+  const [feedMediaIndex, setFeedMediaIndex] = useState(0);
+  const feedMediaListRef = useRef<FlatList>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  const onFeedMediaScroll = (e: any) => {
+    const w = e.nativeEvent.layoutMeasurement.width;
+    if (!w) return;
+    setFeedMediaIndex(Math.round(e.nativeEvent.contentSize.width / w));
+  };
 
   const handleReport = async () => {
+    setMenuVisible(false);
     try {
       await api.post(`/news/${item._id}/report`, { reason: 'Inappropriate content' });
       Alert.alert('Reported', 'Thank you. Our admins will review this story shortly.');
@@ -43,6 +52,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
   };
 
   const handleSave = async () => {
+    setMenuVisible(false);
     if (saving) return;
     setSaving(true);
     try {
@@ -56,6 +66,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
   };
 
   const handleShare = async () => {
+    setMenuVisible(false);
     try {
       const link = Config.PUBLIC_WEB_URL
         ? `${Config.PUBLIC_WEB_URL.replace(/\/$/, '')}/news/${item._id}`
@@ -71,29 +82,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
   };
 
   const handleOptions = () => {
-    Alert.alert(
-      'Options',
-      '',
-      [
-        { text: 'Share', onPress: handleShare },
-        { text: saved ? 'Remove from Saved' : 'Save Story', onPress: handleSave },
-        {
-          text: 'Report Story',
-          onPress: () => {
-            Alert.alert(
-              'Report Story',
-              'Are you sure you want to report this story as inappropriate?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Report', style: 'destructive', onPress: handleReport },
-              ]
-            );
-          },
-          style: 'destructive'
-        },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    setMenuVisible(true);
   };
 
   const handleComments = () => {
@@ -122,34 +111,35 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
       {/* Content */}
       <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('NewsDetail', { id: item._id })}>
         <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.description} numberOfLines={3}>{item.description}</Text>
-        {firstMedia?.url && (
-          firstMedia.type === 'video' ? (
-            <View style={[styles.media, styles.videoPreview]}>
-              <Image source={{ uri: firstMedia.thumbnailUrl || firstMedia.url }} style={styles.media} resizeMode="cover" />
-              <View style={styles.playBadge}><Ionicons name="play" size={20} color="#fff" /></View>
-              {item.media && item.media.length > 1 && (
-                <View style={styles.mediaCountBadge}>
-                  <Ionicons name="images-outline" size={12} color="#fff" />
-                  <Text style={styles.mediaCountText}>{item.media.length}</Text>
+        <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
+        {item.media && item.media.length > 0 && (
+          <View style={styles.feedMediaWrap}>
+            <FlatList
+              ref={feedMediaListRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              pagingEnabled
+              decelerationRate="fast"
+              onMomentumScrollEnd={onFeedMediaScroll}
+              data={item.media}
+              keyExtractor={(_, i) => `feed-media-${i}`}
+              renderItem={({ item: m }) => (
+                <View style={styles.feedMediaItem}>
+                  {m.type === 'video' ? (
+                    <Image source={{ uri: m.thumbnailUrl || m.url }} style={styles.feedMedia} resizeMode="cover" />
+                  ) : (
+                    <Image source={{ uri: m.url }} style={styles.feedMedia} resizeMode="cover" />
+                  )}
                 </View>
               )}
-            </View>
-          ) : (
-            <View style={styles.mediaPreviewWrap}>
-              <Image
-                source={{ uri: firstMedia.url }}
-                style={styles.media}
-                resizeMode="cover"
-              />
-              {item.media && item.media.length > 1 && (
-                <View style={styles.mediaCountBadge}>
-                  <Ionicons name="images-outline" size={12} color="#fff" />
-                  <Text style={styles.mediaCountText}>{item.media.length}</Text>
-                </View>
-              )}
-            </View>
-          )
+            />
+            {item.media.length > 1 && (
+              <View style={styles.feedMediaBadge}>
+                <Ionicons name="images-outline" size={11} color="#fff" />
+                <Text style={styles.feedMediaBadgeText}>{item.media.length}</Text>
+              </View>
+            )}
+          </View>
         )}
       </TouchableOpacity>
 
@@ -179,6 +169,40 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
           <Ionicons name="ellipsis-vertical" size={20} color="#9CA3AF" />
         </TouchableOpacity>
       </View>
+
+      {/* Options menu — proper modal that dismisses on back button and outside tap */}
+      <Modal
+        visible={menuVisible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setMenuVisible(false)}
+        >
+          <View style={styles.menuBox} pointerEvents="box-none">
+            <View style={styles.menuHandle} />
+            <TouchableOpacity style={styles.menuItem} onPress={handleShare} activeOpacity={0.7}>
+              <Ionicons name="share-outline" size={20} color="#1A1A2E" />
+              <Text style={styles.menuItemText}>Share</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={handleSave} activeOpacity={0.7}>
+              <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? Colors.primary : '#1A1A2E'} />
+              <Text style={styles.menuItemText}>{saved ? 'Remove from Saved' : 'Save Story'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={handleReport} activeOpacity={0.7}>
+              <Ionicons name="flag-outline" size={20} color={Colors.error} />
+              <Text style={[styles.menuItemText, { color: Colors.error }]}>Report Story</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.menuItem, styles.menuCancel]} onPress={() => setMenuVisible(false)} activeOpacity={0.7}>
+              <Ionicons name="close" size={20} color="#6B7280" />
+              <Text style={styles.menuCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -237,6 +261,41 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 10,
     marginBottom: 12,
+  },
+  feedMediaWrap: {
+    width: '100%',
+    height: 200,
+    marginBottom: 12,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
+  },
+  feedMedia: {
+    width: '100%',
+    height: 200,
+  },
+  feedMediaItem: {
+    width: '100%',
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  feedMediaBadge: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  feedMediaBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
   },
   mediaPreviewWrap: {
     position: 'relative',
@@ -303,4 +362,46 @@ const styles = StyleSheet.create({
   optionsButton: { padding: 6 },
   videoPreview: { position: 'relative', overflow: 'hidden' },
   playBadge: { position: 'absolute', left: '50%', top: '50%', marginLeft: -22, marginTop: -22, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  menuBox: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 12,
+    paddingTop: 10,
+  },
+  menuHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  menuItemText: {
+    fontSize: 16,
+    color: '#1A1A2E',
+    fontWeight: '500',
+  },
+  menuCancel: {
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    marginTop: 4,
+  },
+  menuCancelText: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
 });

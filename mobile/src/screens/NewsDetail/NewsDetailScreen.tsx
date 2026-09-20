@@ -245,19 +245,44 @@ export const NewsDetailScreen = () => {
         </View>
 
         <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Hero image */}
-          {news.media?.[0]?.url && (
-            news.media[0].type === 'video' ? (
-              <Video
-                source={{ uri: news.media[0].url }}
-                style={styles.heroImage}
-                useNativeControls
-                resizeMode={ResizeMode.COVER}
-                isLooping
+          {/* ALL media in a single swipeable carousel — no text between items */}
+          {news.media && news.media.length > 0 && (
+            <View style={styles.mediaCarouselWrap}>
+              <FlatList
+                ref={mediaListRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                pagingEnabled
+                decelerationRate="fast"
+                onMomentumScrollEnd={onMediaScroll}
+                onScrollBeginDrag={() => setIsMediaScrolling(true)}
+                onScrollEndDrag={() => setIsMediaScrolling(false)}
+                data={news.media}
+                keyExtractor={(_, i) => `media-${i}`}
+                renderItem={({ item }) => (
+                  <View style={styles.mediaCarouselItem}>
+                    {item.type === 'video' ? (
+                      <Video
+                        source={{ uri: item.url }}
+                        style={styles.extraImage}
+                        useNativeControls
+                        resizeMode={ResizeMode.COVER}
+                        isLooping
+                      />
+                    ) : (
+                      <Image source={{ uri: item.url }} style={styles.extraImage} resizeMode="cover" />
+                    )}
+                  </View>
+                )}
               />
-            ) : (
-              <Image source={{ uri: news.media[0].url }} style={styles.heroImage} resizeMode="cover" />
-            )
+              {news.media.length > 1 && (
+                <View style={styles.mediaCounter}>
+                  <Text style={styles.mediaCounterText}>
+                    {activeMediaIndex + 1} / {news.media.length}
+                  </Text>
+                </View>
+              )}
+            </View>
           )}
 
           <View style={styles.content}>
@@ -295,43 +320,6 @@ export const NewsDetailScreen = () => {
 
             {/* Body */}
             <Text style={styles.description}>{news.description}</Text>
-
-            {/* Extra media — swipeable carousel with position indicator */}
-            {news.media && news.media.length > 1 && (
-              <View style={styles.mediaCarouselWrap}>
-                <FlatList
-                  ref={mediaListRef}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  pagingEnabled
-                  decelerationRate="fast"
-                  onMomentumScrollEnd={onMediaScroll}
-                  onScrollBeginDrag={() => setIsMediaScrolling(true)}
-                  onScrollEndDrag={() => setIsMediaScrolling(false)}
-                  data={news.media.slice(1)}
-                  keyExtractor={(_, i) => `media-${i}`}
-                  renderItem={({ item }) => (
-                    <View style={styles.mediaCarouselItem}>
-                      {item.type === 'video' ? (
-                        <Video
-                          source={{ uri: item.url }}
-                          style={styles.extraImage}
-                          useNativeControls
-                          resizeMode={ResizeMode.COVER}
-                        />
-                      ) : (
-                        <Image source={{ uri: item.url }} style={styles.extraImage} resizeMode="cover" />
-                      )}
-                    </View>
-                  )}
-                />
-                <View style={styles.mediaCounter}>
-                  <Text style={styles.mediaCounterText}>
-                    {activeMediaIndex + 1} / {news.media.length}
-                  </Text>
-                </View>
-              </View>
-            )}
 
             {/* Comments section */}
             <View style={styles.commentsHeader}>
@@ -424,7 +412,6 @@ const styles = StyleSheet.create({
   viewsText: { fontSize: 13, color: '#9CA3AF' },
 
   scrollContent: { paddingBottom: 8 },
-  heroImage: { width: '100%', height: 260 },
 
   content: { padding: 18 },
   categoryBadge: {
