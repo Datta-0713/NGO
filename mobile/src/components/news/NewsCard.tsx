@@ -96,6 +96,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
     );
   };
 
+  const handleComments = () => {
+    navigation.navigate('NewsDetail', { id: item._id });
+  };
+
   return (
     <View style={styles.card}>
       {/* Author header */}
@@ -124,18 +128,32 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
             <View style={[styles.media, styles.videoPreview]}>
               <Image source={{ uri: firstMedia.thumbnailUrl || firstMedia.url }} style={styles.media} resizeMode="cover" />
               <View style={styles.playBadge}><Ionicons name="play" size={20} color="#fff" /></View>
+              {item.media && item.media.length > 1 && (
+                <View style={styles.mediaCountBadge}>
+                  <Ionicons name="images-outline" size={12} color="#fff" />
+                  <Text style={styles.mediaCountText}>{item.media.length}</Text>
+                </View>
+              )}
             </View>
           ) : (
-            <Image
-              source={{ uri: firstMedia.url }}
-              style={styles.media}
-              resizeMode="cover"
-            />
+            <View style={styles.mediaPreviewWrap}>
+              <Image
+                source={{ uri: firstMedia.url }}
+                style={styles.media}
+                resizeMode="cover"
+              />
+              {item.media && item.media.length > 1 && (
+                <View style={styles.mediaCountBadge}>
+                  <Ionicons name="images-outline" size={12} color="#fff" />
+                  <Text style={styles.mediaCountText}>{item.media.length}</Text>
+                </View>
+              )}
+            </View>
           )
         )}
       </TouchableOpacity>
 
-      {/* Footer */}
+      {/* Footer — like · comment · save · share */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.likeButton} onPress={onLike} activeOpacity={0.7}>
           <Ionicons
@@ -146,15 +164,19 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
           <Text style={[styles.likeCount, isLiked && styles.likedText]}>{likesCount}</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.commentButton} onPress={handleComments} activeOpacity={0.7}>
+          <Ionicons name="chatbubble-outline" size={20} color="#9CA3AF" />
+          <Text style={styles.commentCount}>{item.commentsCount ?? 0}</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity onPress={handleSave} disabled={saving} style={styles.saveButton} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
           <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? Colors.primary : '#9CA3AF'} />
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('NewsDetail', { id: item._id })}
-          style={styles.viewMoreBtn}
-        >
-          <Text style={styles.viewMore}>View more</Text>
-          <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
+        <TouchableOpacity onPress={handleShare} style={styles.shareButton} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+          <Ionicons name="share-outline" size={20} color="#9CA3AF" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleOptions} style={styles.optionsButton} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+          <Ionicons name="ellipsis-vertical" size={20} color="#9CA3AF" />
         </TouchableOpacity>
       </View>
     </View>
@@ -162,7 +184,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
 };
 
 const styles = StyleSheet.create({
-  card: {
+    card: {
     backgroundColor: '#fff',
     borderRadius: 14,
     padding: 16,
@@ -198,23 +220,48 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: '#1A1A2E',
-    marginBottom: 6,
-    lineHeight: 22,
+    marginBottom: 8,
+    lineHeight: 24,
   },
   description: {
     fontSize: 14,
-    color: '#4B5563',
+    color: '#374151',
+    lineHeight: 22,
     marginBottom: 12,
-    lineHeight: 20,
   },
   media: {
     width: '100%',
     height: 200,
     borderRadius: 10,
     marginBottom: 12,
+  },
+  mediaPreviewWrap: {
+    position: 'relative',
+    width: '100%',
+    height: 200,
+    marginBottom: 12,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  mediaCountBadge: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  mediaCountText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
   },
   footer: {
     flexDirection: 'row',
@@ -228,24 +275,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
   likeCount: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
     fontWeight: '500',
   },
   likedText: { color: Colors.heartRed },
-  saveButton: { marginRight: 10, padding: 4 },
-  videoPreview: { position: 'relative', overflow: 'hidden' },
-  playBadge: { position: 'absolute', left: '50%', top: '50%', marginLeft: -22, marginTop: -22, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
-  viewMoreBtn: {
+  commentButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  viewMore: {
+  commentCount: {
     fontSize: 13,
-    color: Colors.primary,
-    fontWeight: '600',
+    color: '#6B7280',
+    fontWeight: '500',
   },
+  saveButton: { marginRight: 4, padding: 6 },
+  shareButton: { padding: 6 },
+  optionsButton: { padding: 6 },
+  videoPreview: { position: 'relative', overflow: 'hidden' },
+  playBadge: { position: 'absolute', left: '50%', top: '50%', marginLeft: -22, marginTop: -22, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
 });

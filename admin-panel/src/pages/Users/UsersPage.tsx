@@ -49,7 +49,7 @@ const UsersPage: React.FC = () => {
             <select
               value={role}
               onChange={(e) => { setRole(e.target.value as UserRoleFilter); goToPage(1); }}
-              className="w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full sm:w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             >
               <option value="">All</option>
               <option value="user">Contributor</option>
@@ -61,14 +61,14 @@ const UsersPage: React.FC = () => {
             <select
               value={status}
               onChange={(e) => { setStatus(e.target.value as UserStatusFilter); goToPage(1); }}
-              className="w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full sm:w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             >
               <option value="">All</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
           </div>
-          <div className="w-72">
+          <div className="w-full sm:w-72 flex-shrink-0">
             <Input
               placeholder="Search by name or email..."
               icon={<Search size={16} />}
@@ -86,22 +86,23 @@ const UsersPage: React.FC = () => {
           <EmptyState icon={<Users size={40} />} title="No contributors found" description="Try a different search." />
         ) : (
           <>
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  {['Contributor', 'Location', 'Stories', 'Likes', 'Credits', 'Joined'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wide">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {users.map((user) => (
-                  <tr
-                    key={user._id}
-                    onClick={() => setSelectedUser(user)}
-                    className="hover:bg-gray-50 cursor-pointer transition-colors"
-                  >
-                    <td className="px-4 py-3">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px]">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    {['Contributor', 'Location', 'Stories', 'Likes', 'Credits', 'Joined'].map(h => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {users.map((user) => (
+                    <tr
+                      key={user._id}
+                      onClick={() => setSelectedUser(user)}
+                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
+                      <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <Avatar src={user.profilePhoto} name={user.name} size={36} />
                         <div>
@@ -126,6 +127,7 @@ const UsersPage: React.FC = () => {
             <div className="px-4 py-3 border-t border-gray-100">
               <Pagination page={page} totalPages={totalPages} onPageChange={goToPage} />
             </div>
+          </div>
           </>
         )}
       </div>

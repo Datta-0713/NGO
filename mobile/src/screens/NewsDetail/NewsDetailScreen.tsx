@@ -166,17 +166,29 @@ export const NewsDetailScreen = () => {
   };
 
   const handleDeleteComment = (commentId: string) => {
-    Alert.alert('Delete Comment', 'Remove this comment?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          try {
-            await feedApi.deleteComment(id, commentId);
-            setComments(prev => prev.filter(c => c._id !== commentId));
-          } catch {}
+    Alert.alert(
+      'Delete Comment',
+      'Are you sure you want to remove this comment? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await feedApi.deleteComment(id, commentId);
+              setComments(prev => prev.filter(c => c._id !== commentId));
+              // Refresh count from server so the badge stays accurate
+              feedApi.getComments(id).then(data => {
+                if (data?.comments) setComments(data.comments);
+              }).catch(() => {});
+            } catch (e: any) {
+              Alert.alert('Could not delete comment', e?.response?.data?.message || 'Please try again.');
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   if (loading) {

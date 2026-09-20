@@ -39,12 +39,12 @@ const SubmissionsPage: React.FC = () => {
     <div className="flex flex-col gap-5">
       {/* Filters */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-1 bg-white rounded-xl border border-gray-100 shadow-sm p-1">
+        <div className="flex items-center gap-1 bg-white rounded-xl border border-gray-100 shadow-sm p-1 overflow-x-auto flex-1 min-w-0">
           {STATUS_TABS.map(tab => (
             <button
               key={tab.value}
               onClick={() => { setStatusFilter(tab.value); goToPage(1); }}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 sm:px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                 statusFilter === tab.value
                   ? 'bg-primary text-white shadow-sm'
                   : 'text-muted hover:text-gray-800 hover:bg-gray-50'
@@ -54,7 +54,7 @@ const SubmissionsPage: React.FC = () => {
             </button>
           ))}
         </div>
-        <div className="w-72">
+        <div className="w-full sm:w-72 flex-shrink-0">
           <Input
             placeholder="Search submissions..."
             icon={<Search size={16} />}

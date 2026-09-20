@@ -68,7 +68,7 @@ const CreditsPage: React.FC = () => {
         <Button icon={<Plus size={16} />} onClick={() => setAdjustModalOpen(true)}>Adjust Credits</Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { icon: TrendingUp, label: 'Total Awarded', value: stats.totalAwarded.toString(), color: 'text-green-600 bg-green-50' },
           { icon: TrendingDown, label: 'Total Deducted', value: stats.totalDeducted.toString(), color: 'text-red-600 bg-red-50' },
@@ -84,7 +84,7 @@ const CreditsPage: React.FC = () => {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
           <h3 className="font-semibold text-gray-900">Recent Transactions</h3>
         </div>
@@ -98,47 +98,49 @@ const CreditsPage: React.FC = () => {
           </div>
         ) : (
           <>
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  {['Date', 'User', 'Type', 'Amount', 'Reason'].map(h => (
-                    <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wide">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {transactions.map((tx: any) => (
-                  <tr key={tx._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-muted whitespace-nowrap">
-                      {safeFormat(tx.createdAt, 'MMM d, yyyy HH:mm')}
-                    </td>
-                    <td className="px-6 py-4">
-                      {tx.user ? (
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-gray-900">{tx.user.name}</span>
-                          <span className="text-xs text-muted">{tx.user.email}</span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted">Unknown User</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium capitalize ${
-                        tx.type === 'credit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {tx.type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                      {tx.type === 'credit' ? '+' : '-'}{tx.amount}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 max-w-md truncate">
-                      {tx.reason} {tx.relatedNews ? `(News: ${tx.relatedNews.title})` : ''}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px]">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    {['Date', 'User', 'Type', 'Amount', 'Reason'].map(h => (
+                      <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {transactions.map((tx: any) => (
+                    <tr key={tx._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm text-muted whitespace-nowrap">
+                        {safeFormat(tx.createdAt, 'MMM d, yyyy HH:mm')}
+                      </td>
+                      <td className="px-6 py-4">
+                        {tx.user ? (
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-900">{tx.user.name}</span>
+                            <span className="text-xs text-muted">{tx.user.email}</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted">Unknown User</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium capitalize ${
+                          tx.type === 'credit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {tx.type}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-900 whitespace-nowrap">
+                        {tx.type === 'credit' ? '+' : '-'}{tx.amount}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600 max-w-md truncate">
+                        {tx.reason} {tx.relatedNews ? `(News: ${tx.relatedNews.title})` : ''}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <div className="px-6 py-4 border-t border-gray-100">
               <Pagination page={page} totalPages={Math.ceil(total / limit)} onPageChange={goToPage} />
             </div>

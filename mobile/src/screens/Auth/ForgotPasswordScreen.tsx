@@ -23,15 +23,39 @@ export const ForgotPasswordScreen = () => {
       setError('Please enter your email address');
       return;
     }
+    // Basic email format check so we don't waste a request on garbage input
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
 
     setLoading(true);
     setError(null);
+    setSuccess(false);
 
     try {
-      await api.post('/auth/forgot-password', { email });
+      const res = await api.post('/auth/forgot-password', { email });
+      // The server returns 200 with a generic message even when the email is
+      // not registered (to prevent user enumeration). But if SMTP is broken
+      // the server now returns 500 with a real error — surface that so the
+      // admin knows to configure SMTP.
+      if (res?.status && res.status >= 400) {
+        setError(res.data?.message || 'Could not send reset email. Please try again later.');
+        return;
+      }
       setSuccess(true);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send reset email');
+      const status = err?.response?.status;
+      const message = err?.response?.data?.message;
+      if (status === 500 && message) {
+        // SMTP misconfiguration — surface the real reason
+        setError(message);
+      } else if (status === 429) {
+        setError('Too many attempts. Please wait a few minutes and try again.');
+      } else {
+        setError(message || 'Failed to send reset email. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
