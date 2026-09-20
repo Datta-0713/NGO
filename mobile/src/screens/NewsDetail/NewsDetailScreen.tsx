@@ -265,6 +265,8 @@ renderItem={({ item }) => (
                       {item.type === 'video' ? (
                         <Video
                           source={{ uri: item.url }}
+                          posterSource={item.thumbnailUrl ? { uri: item.thumbnailUrl } : undefined}
+                          usePoster={Boolean(item.thumbnailUrl)}
                           style={styles.extraImage}
                           useNativeControls
                           resizeMode={ResizeMode.COVER}
@@ -350,7 +352,7 @@ renderItem={({ item }) => (
                     <Text style={styles.commentText}>{c.text}</Text>
                   </View>
                   {c.user?._id === currentUser?._id && (
-                    <TouchableOpacity onPress={() => handleDeleteComment(c._id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <TouchableOpacity style={styles.commentDeleteButton} onPress={() => handleDeleteComment(c._id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <Ionicons name="trash-outline" size={16} color="#9CA3AF" />
                     </TouchableOpacity>
                   )}
@@ -457,6 +459,7 @@ description: { fontSize: 16, color: '#374151', lineHeight: 26, marginBottom: 20 
   noCommentsText: { color: '#9CA3AF', fontSize: 14 },
 
   commentItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14, gap: 10 },
+  commentDeleteButton: { width: 30, minHeight: 34, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   commentBubble: { flex: 1, backgroundColor: '#F9FAFB', borderRadius: 12, padding: 10 },
   commentTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   commentName: { fontSize: 13, fontWeight: '700', color: '#1A1A2E' },

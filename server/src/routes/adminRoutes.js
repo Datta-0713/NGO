@@ -1,14 +1,16 @@
 'use strict';
 const express = require('express');
-const { getDashboardStats, getAllUsers, getUserById, updateUserStatus, broadcastNotification } = require('../controllers/adminController');
+const { getDashboardStats, getAllUsers, getUserById, updateUserNotes, updateUserStatus, broadcastNotification } = require('../controllers/adminController');
 const { getAdminSubmissionsQueue, getSubmissionById, getSubmissionHistory, claimSubmission, approveSubmission, rejectSubmission, requestChanges, updateSubmissionNotes } = require('../controllers/submissionController');
 const { adminAdjustCredits } = require('../controllers/creditController');
 const { getReports, resolveReport } = require('../controllers/reportController');
 const { getAuditLogs } = require('../controllers/auditController');
 const { getSettings, updateSettings } = require('../controllers/settingsController');
+const { getAdminNews, getAdminNewsById, updateAdminNews, archiveNews, restoreNews, permanentlyDeleteNews, deleteNewsMedia, updateAdminNewsNotes, deleteAdminComment } = require('../controllers/adminNewsController');
 const { updateSettingsValidation } = require('../validators/settingsValidators');
 const { protect, requireAdmin } = require('../middlewares/auth');
 const { mutationLimiter } = require('../middlewares/rateLimiter');
+const { uploadMedia } = require('../middlewares/upload');
 const { moderationMessageValidation } = require('../validators/newsValidators');
 const validate = require('../middlewares/validate');
 
@@ -16,6 +18,15 @@ const router = express.Router();
 const adminOnly = [protect, requireAdmin];
 
 router.get('/dashboard/stats', ...adminOnly, getDashboardStats);
+router.get('/news', ...adminOnly, getAdminNews);
+router.get('/news/:id', ...adminOnly, getAdminNewsById);
+router.patch('/news/:id', ...adminOnly, mutationLimiter, uploadMedia, updateAdminNews);
+router.patch('/news/:id/archive', ...adminOnly, mutationLimiter, archiveNews);
+router.patch('/news/:id/restore', ...adminOnly, mutationLimiter, restoreNews);
+router.delete('/news/:id', ...adminOnly, mutationLimiter, permanentlyDeleteNews);
+router.delete('/news/:id/media/:mediaIndex', ...adminOnly, mutationLimiter, deleteNewsMedia);
+router.patch('/news/:id/notes', ...adminOnly, mutationLimiter, updateAdminNewsNotes);
+router.delete('/news/:id/comments/:commentId', ...adminOnly, mutationLimiter, deleteAdminComment);
 router.get('/submissions', ...adminOnly, getAdminSubmissionsQueue);
 router.get('/submissions/:id', ...adminOnly, getSubmissionById);
 router.get('/submissions/:id/history', ...adminOnly, getSubmissionHistory);
@@ -27,6 +38,7 @@ router.patch('/submissions/:id/notes', ...adminOnly, mutationLimiter, updateSubm
 router.get('/users', ...adminOnly, getAllUsers);
 router.get('/users/:id', ...adminOnly, getUserById);
 router.patch('/users/:id/status', ...adminOnly, mutationLimiter, updateUserStatus);
+router.patch('/users/:id/notes', ...adminOnly, mutationLimiter, updateUserNotes);
 router.patch('/credits/adjust', ...adminOnly, mutationLimiter, adminAdjustCredits);
 router.post('/users/:userId/credits', ...adminOnly, mutationLimiter, adminAdjustCredits);
 router.get('/reports', ...adminOnly, getReports);

@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
   profilePhoto: { type: String, default: '' },
   profilePhotoPublicId: { type: String, default: '', select: false },
   bio: { type: String, default: '', maxlength: 300 },
+  adminNotes: { type: String, select: false, default: '', maxlength: 5000 },
   location: { type: String, default: '', maxlength: 150 },
   role: { type: String, enum: ['user', 'admin'], default: 'user', index: true },
   credits: { type: Number, default: 0, min: 0 },
@@ -28,6 +29,7 @@ const userSchema = new mongoose.Schema({
       delete ret.resetPasswordToken;
       delete ret.resetPasswordExpires;
       delete ret.pushToken;
+      delete ret.adminNotes;
       return ret;
     }
   }

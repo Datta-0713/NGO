@@ -79,7 +79,7 @@ const runUpload = (middleware, fieldHandler) => (req, res, next) => {
               resource_type: 'video',
               secure: true,
               format: 'jpg',
-              transformation: [{ start_offset: '0' }, { width: 900, height: 600, crop: 'fill' }],
+              transformation: [{ start_offset: '0' }, { width: 900, height: 1125, crop: 'fill', gravity: 'auto', quality: 'auto' }],
             })
           : undefined;
         uploaded.push({
@@ -116,14 +116,40 @@ const uploadSingle = runUpload(profileUpload.single('profilePhoto'), {
   },
 });
 
-const deleteCloudinaryAssets = async (assets = []) => {
-  await Promise.all(assets.filter(a => a?.publicId).map(async (asset) => {
+const destroyCloudinaryAsset = async (asset) => {
+  if (!asset?.publicId) return { publicId: '', skipped: true };
+  const resourceType = asset.resourceType || (asset.type === 'video' ? 'video' : 'image');
+  let lastError = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      await cloudinary.uploader.destroy(asset.publicId, { resource_type: asset.resourceType || (asset.type === 'video' ? 'video' : 'image') });
+      const result = await cloudinary.uploader.destroy(asset.publicId, {
+        resource_type: resourceType,
+        invalidate: true,
+      });
+      if (result?.result === 'ok' || result?.result === 'not found') {
+        return { publicId: asset.publicId, resourceType, result: result.result };
+      }
+      lastError = new Error(`Cloudinary returned ${result?.result || 'unknown result'}`);
     } catch (error) {
-      console.warn('[Cloudinary cleanup failed]', asset.publicId, error.message);
+      lastError = error;
     }
-  }));
+    await new Promise((resolve) => setTimeout(resolve, attempt * 250));
+  }
+  return { publicId: asset.publicId, resourceType, error: lastError };
 };
 
-module.exports = { uploadMedia, uploadSingle, uploadFileToCloudinary, deleteCloudinaryAssets, safeUnlink };
+const deleteCloudinaryAssets = async (assets = [], { strict = false } = {}) => {
+  const results = await Promise.all(assets.filter(a => a?.publicId).map(destroyCloudinaryAsset));
+  const failures = results.filter((result) => result?.error);
+  if (failures.length && strict) {
+    const error = new AppError(`Cloud storage cleanup failed for ${failures.length} asset(s). Database content was not removed.`, 502);
+    error.cleanupFailures = failures.map((item) => ({ publicId: item.publicId, resourceType: item.resourceType, message: item.error?.message || 'Unknown Cloudinary error' }));
+    throw error;
+  }
+  failures.forEach((failure) => console.warn('[Cloudinary cleanup failed]', failure.publicId, failure.error?.message));
+  return { results, failures };
+};
+
+const deleteCloudinaryAssetsStrict = (assets = []) => deleteCloudinaryAssets(assets, { strict: true });
+
+module.exports = { uploadMedia, uploadSingle, uploadFileToCloudinary, deleteCloudinaryAssets, deleteCloudinaryAssetsStrict, safeUnlink };

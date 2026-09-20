@@ -4,21 +4,40 @@ import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch } from '../hooks/useAppDispatch';
 import { markReadThunk, refreshUnreadCount } from '../store/slices/notificationsSlice';
 
+/**
+ * Notification responses are intentionally handled only from the live listener.
+ * We do not consume Expo's persisted "last response" during startup because doing
+ * so can replay an old tap and incorrectly open Notifications on every cold launch.
+ */
 export const NotificationBridge = () => {
   const navigation = useNavigation<any>();
   const dispatch = useAppDispatch();
-  const lastNotificationResponse = Notifications.useLastNotificationResponse();
   const handledResponseIds = useRef(new Set<string>());
 
   useEffect(() => {
-    if (lastNotificationResponse) {
-      const responseId = String(lastNotificationResponse.notification.request.identifier || '');
+    const refreshBadge = async () => {
+      try {
+        const action = await dispatch(refreshUnreadCount()).unwrap();
+        await Notifications.setBadgeCountAsync(Math.max(0, action.count));
+      } catch {
+        // Badge refresh is non-critical.
+      }
+    };
+
+    void refreshBadge();
+
+    const receivedSub = Notifications.addNotificationReceivedListener(() => {
+      void refreshBadge();
+    });
+
+    const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const responseId = String(response.notification.request.identifier || '');
       if (responseId && handledResponseIds.current.has(responseId)) return;
       if (responseId) handledResponseIds.current.add(responseId);
 
-      const data = lastNotificationResponse.notification.request.content.data as any;
+      const data = response.notification.request.content.data as any;
       if (data?.notificationId) {
-        dispatch(markReadThunk(String(data.notificationId)));
+        void dispatch(markReadThunk(String(data.notificationId)));
       }
 
       const newsId = data?.newsId || data?.relatedEntity?.entityId;
@@ -32,25 +51,13 @@ export const NotificationBridge = () => {
         .unwrap()
         .then((next) => Notifications.setBadgeCountAsync(Math.max(0, next.count)))
         .catch(() => null);
-    }
-  }, [lastNotificationResponse, dispatch, navigation]);
-
-  useEffect(() => {
-    const refreshBadge = async () => {
-      try {
-        const action = await dispatch(refreshUnreadCount()).unwrap();
-        await Notifications.setBadgeCountAsync(Math.max(0, action.count));
-      } catch {}
-    };
-
-    void refreshBadge();
-
-    const receivedSub = Notifications.addNotificationReceivedListener(() => {
-      void refreshBadge();
     });
 
-    return () => { receivedSub.remove(); };
-  }, [dispatch]);
+    return () => {
+      receivedSub.remove();
+      responseSub.remove();
+    };
+  }, [dispatch, navigation]);
 
   return null;
 };

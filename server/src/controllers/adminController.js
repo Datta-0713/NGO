@@ -4,6 +4,9 @@ const News = require('../models/News');
 const User = require('../models/User');
 const CreditTransaction = require('../models/CreditTransaction');
 const Notification = require('../models/Notification');
+const Comment = require('../models/Comment');
+const NewsLike = require('../models/NewsLike');
+const SavedStory = require('../models/SavedStory');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendSuccess } = require('../utils/apiResponse');
@@ -118,9 +121,96 @@ const getAllUsers = asyncHandler(async (req, res) => {
 
 const getUserById = asyncHandler(async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) throw new AppError('Invalid user id', 400);
-  const user = await User.findById(req.params.id);
+  const userId = new mongoose.Types.ObjectId(req.params.id);
+
+  const [user, submittedNewsCount, commentsCount, likesCount, savesCount, creditTransactionsCount, notificationsCount, unreadNotificationsCount, submittedNews, comments, likes, saves, creditTransactions, notifications] = await Promise.all([
+    User.findById(userId).select('+adminNotes'),
+    News.countDocuments({ submittedBy: userId, deletedAt: null }),
+    Comment.countDocuments({ user: userId }),
+    NewsLike.countDocuments({ user: userId }),
+    SavedStory.countDocuments({ user: userId }),
+    CreditTransaction.countDocuments({ user: userId }),
+    Notification.countDocuments({ user: userId }),
+    Notification.countDocuments({ user: userId, read: false }),
+    News.find({ submittedBy: userId, deletedAt: null })
+      .select('title status category location media createdAt updatedAt publishedAt views')
+      .sort({ createdAt: -1 }).limit(8),
+    Comment.find({ user: userId })
+      .select('news text createdAt deletedAt')
+      .populate('news', 'title status')
+      .sort({ createdAt: -1 }).limit(8),
+    NewsLike.find({ user: userId })
+      .select('news createdAt')
+      .populate('news', 'title status')
+      .sort({ createdAt: -1 }).limit(8),
+    SavedStory.find({ user: userId })
+      .select('news createdAt')
+      .populate('news', 'title status')
+      .sort({ createdAt: -1 }).limit(8),
+    CreditTransaction.find({ user: userId })
+      .select('amount type reason relatedNews performedBy createdAt')
+      .populate('relatedNews', 'title status')
+      .populate('performedBy', 'name email profilePhoto')
+      .sort({ createdAt: -1 }).limit(8),
+    Notification.find({ user: userId })
+      .select('type title message read relatedEntity createdAt')
+      .sort({ createdAt: -1 }).limit(8),
+  ]);
+
   if (!user) throw new AppError('User not found', 404);
-  sendSuccess(res, 200, { user });
+
+  const safeUser = user.toJSON();
+  const notes = String(user.adminNotes || '');
+
+  sendSuccess(res, 200, {
+    user: safeUser,
+    notes: { adminNotes: notes },
+    activity: {
+      counts: {
+        submittedNews: submittedNewsCount,
+        comments: commentsCount,
+        likes: likesCount,
+        saves: savesCount,
+        creditTransactions: creditTransactionsCount,
+        notifications: notificationsCount,
+        unreadNotifications: unreadNotificationsCount,
+      },
+      recent: {
+        submittedNews,
+        comments,
+        likes,
+        saves,
+        creditTransactions,
+        notifications,
+      },
+    },
+  });
+});
+
+const updateUserNotes = asyncHandler(async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) throw new AppError('Invalid user id', 400);
+  const notes = typeof req.body.adminNotes === 'string' ? req.body.adminNotes.trim() : null;
+  if (notes === null) throw new AppError('adminNotes must be a string', 400);
+  if (notes.length > 5000) throw new AppError('adminNotes cannot exceed 5000 characters', 400);
+
+  const user = await User.findById(req.params.id).select('+adminNotes');
+  if (!user) throw new AppError('User not found', 404);
+
+  const beforeLength = String(user.adminNotes || '').length;
+  user.adminNotes = notes;
+  await user.save({ validateBeforeSave: false });
+
+  await writeAuditLog({
+    admin: req.user._id,
+    action: 'user_notes_updated',
+    entityType: 'User',
+    entityId: user._id,
+    before: { length: beforeLength },
+    after: { length: notes.length },
+    req,
+  });
+
+  sendSuccess(res, 200, { notes: { adminNotes: notes } }, 'User notes saved');
 });
 
 const updateUserStatus = asyncHandler(async (req, res) => {
@@ -160,4 +250,4 @@ const broadcastNotification = asyncHandler(async (req, res) => {
   sendSuccess(res, 200, { recipients: users.length }, `Notification sent to ${users.length} active users`);
 });
 
-module.exports = { getDashboardStats, getAllUsers, getUserById, updateUserStatus, broadcastNotification };
+module.exports = { getDashboardStats, getAllUsers, getUserById, updateUserNotes, updateUserStatus, broadcastNotification };

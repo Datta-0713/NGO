@@ -34,6 +34,7 @@ const newsSchema = new mongoose.Schema({
   publishedAt: { type: Date },
   deletedAt: { type: Date, default: null, index: true },
   deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  archivedFromStatus: { type: String, enum: ['pending', 'under_review', 'needs_changes', 'published', 'rejected'], default: 'published' },
   // Legacy embedded social data. Kept for one-time migration only and never returned by normal API responses.
   likes: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], select: false, default: undefined },
   comments: { type: [mongoose.Schema.Types.Mixed], select: false, default: undefined },

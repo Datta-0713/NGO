@@ -12,6 +12,7 @@ const { escapeRegex } = require('../utils/security');
 const { deleteCloudinaryAssets } = require('../middlewares/upload');
 const { writeAuditLog } = require('../utils/audit');
 const { withTransaction } = require('../utils/dbTransaction');
+const { normalizeMedia } = require('../utils/media');
 
 const normalizePagination = (page, limit, defaultLimit = 10) => ({
   page: Math.max(1, Number(page) || 1),
@@ -34,6 +35,7 @@ const enrichNews = async (newsDocs, userId = null) => {
 
   return newsDocs.map((doc) => {
     const json = doc.toJSON();
+    json.media = normalizeMedia(doc.media);
     json.likesCount = likeMap.get(String(doc._id)) || 0;
     json.commentsCount = commentMap.get(String(doc._id)) || 0;
     json.liked = likedSet.has(String(doc._id));
@@ -168,13 +170,18 @@ const getSavedNews = asyncHandler(async (req, res) => {
   const { page, limit } = normalizePagination(req.query.page, req.query.limit, 20);
   const [saved, total] = await Promise.all([
     SavedStory.find({ user: req.user._id }).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate({
-      path: 'news', populate: { path: 'submittedBy', select: 'name profilePhoto' }
+      path: 'news',
+      match: { status: 'published', deletedAt: null },
+      populate: { path: 'submittedBy', select: 'name profilePhoto' },
     }),
     SavedStory.countDocuments({ user: req.user._id }),
   ]);
+  const staleIds = saved.filter((item) => !item.news).map((item) => item._id);
+  if (staleIds.length) await SavedStory.deleteMany({ _id: { $in: staleIds }, user: req.user._id });
   const newsDocs = saved.map((x) => x.news).filter(Boolean);
   const news = await enrichNews(newsDocs, req.user._id);
-  sendSuccess(res, 200, { news, total, page, limit, totalPages: Math.ceil(total / limit) });
+  const cleanTotal = Math.max(0, total - staleIds.length);
+  sendSuccess(res, 200, { news, total: cleanTotal, page, limit, totalPages: Math.ceil(cleanTotal / limit) });
 });
 
 const deleteNews = asyncHandler(async (req, res) => {
@@ -182,6 +189,7 @@ const deleteNews = asyncHandler(async (req, res) => {
     const current = await News.findOne({ _id: req.params.id, deletedAt: null }).session(session);
     if (!current) throw new AppError('News not found', 404);
     const before = { status: current.status, deletedAt: current.deletedAt };
+    current.archivedFromStatus = current.status === 'archived' ? (current.archivedFromStatus || 'published') : current.status;
     current.status = 'archived';
     current.deletedAt = new Date();
     current.deletedBy = req.user._id;
@@ -216,16 +224,14 @@ const addComment = asyncHandler(async (req, res) => {
 });
 
 const deleteComment = asyncHandler(async (req, res) => {
-  const comment = await Comment.findOne({ _id: req.params.commentId, news: req.params.id, deletedAt: null });
+  const comment = await Comment.findOne({ _id: req.params.commentId, news: req.params.id });
   if (!comment) throw new AppError('Comment not found', 404);
   if (String(comment.user) !== String(req.user._id) && req.user.role !== 'admin') {
     throw new AppError('Not authorised to delete this comment', 403);
   }
-  comment.deletedAt = new Date();
-  comment.deletedBy = req.user._id;
-  await comment.save();
-  const commentsCount = await Comment.countDocuments({ news: req.params.id, deletedAt: null });
-  sendSuccess(res, 200, { commentsCount }, 'Comment deleted');
+  await Comment.deleteOne({ _id: comment._id });
+  const commentsCount = await Comment.countDocuments({ news: req.params.id });
+  sendSuccess(res, 200, { commentsCount }, 'Comment permanently deleted');
 });
 
 module.exports = {
