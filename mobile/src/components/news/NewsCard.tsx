@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Share, Alert, FlatList, Modal } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Share, Alert, FlatList, Modal, useWindowDimensions } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
@@ -20,6 +20,7 @@ interface NewsCardProps {
 
 export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const { width: screenWidth } = useWindowDimensions();
 
   const dateObj = item.createdAt ? new Date(item.createdAt) : null;
   const timeAgo = dateObj && isValid(dateObj)
@@ -33,11 +34,14 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
   const [feedMediaIndex, setFeedMediaIndex] = useState(0);
   const feedMediaListRef = useRef<FlatList>(null);
   const [menuVisible, setMenuVisible] = useState(false);
+  // Subtract card padding (16*2) + margin (14) so the horizontal FlatList items
+  // have a concrete width. '100%' inside a horizontal list collapses to 0px.
+  const mediaWidth = screenWidth - 56;
 
   const onFeedMediaScroll = (e: any) => {
     const w = e.nativeEvent.layoutMeasurement.width;
     if (!w) return;
-    setFeedMediaIndex(Math.round(e.nativeEvent.contentSize.width / w));
+    setFeedMediaIndex(Math.round(e.nativeEvent.contentOffset.x / w));
   };
 
   const handleReport = async () => {
@@ -124,7 +128,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, onLike }) => {
               data={item.media}
               keyExtractor={(_, i) => `feed-media-${i}`}
               renderItem={({ item: m }) => (
-                <View style={styles.feedMediaItem}>
+                <View style={[styles.feedMediaItem, { width: mediaWidth }]}>
                   {m.type === 'video' ? (
                     <Image source={{ uri: m.thumbnailUrl || m.url }} style={styles.feedMedia} resizeMode="cover" />
                   ) : (

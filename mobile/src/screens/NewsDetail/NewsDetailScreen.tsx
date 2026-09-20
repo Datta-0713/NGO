@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, ActivityIndicator,
   TouchableOpacity, TextInput, KeyboardAvoidingView, Platform,
-  FlatList, Alert, Share,
+  FlatList, Alert, Share, useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Video, ResizeMode } from 'expo-av';
@@ -29,6 +29,7 @@ export const NewsDetailScreen = () => {
   const navigation = useNavigation();
   const dispatch   = useAppDispatch();
   const currentUser = useAppSelector(state => state.auth.user);
+  const { width: screenWidth } = useWindowDimensions();
   const { id } = route.params;
 
   const [news, setNews]           = useState<NewsItem | null>(null);
@@ -259,22 +260,22 @@ export const NewsDetailScreen = () => {
                 onScrollEndDrag={() => setIsMediaScrolling(false)}
                 data={news.media}
                 keyExtractor={(_, i) => `media-${i}`}
-                renderItem={({ item }) => (
-                  <View style={styles.mediaCarouselItem}>
-                    {item.type === 'video' ? (
-                      <Video
-                        source={{ uri: item.url }}
-                        style={styles.extraImage}
-                        useNativeControls
-                        resizeMode={ResizeMode.COVER}
-                        isLooping
-                      />
-                    ) : (
-                      <Image source={{ uri: item.url }} style={styles.extraImage} resizeMode="cover" />
-                    )}
-                  </View>
-                )}
-              />
+renderItem={({ item }) => (
+                    <View style={[styles.mediaCarouselItem, { width: screenWidth }]}>
+                      {item.type === 'video' ? (
+                        <Video
+                          source={{ uri: item.url }}
+                          style={styles.extraImage}
+                          useNativeControls
+                          resizeMode={ResizeMode.COVER}
+                          isLooping
+                        />
+                      ) : (
+                        <Image source={{ uri: item.url }} style={styles.extraImage} resizeMode="cover" />
+                      )}
+                    </View>
+                  )}
+                />
               {news.media.length > 1 && (
                 <View style={styles.mediaCounter}>
                   <Text style={styles.mediaCounterText}>
@@ -437,7 +438,7 @@ const styles = StyleSheet.create({
 description: { fontSize: 16, color: '#374151', lineHeight: 26, marginBottom: 20 },
 
   mediaCarouselWrap: { marginBottom: 20, position: 'relative' },
-  mediaCarouselItem: { width: '100%', height: 320, marginRight: 0, justifyContent: 'center', alignItems: 'center' },
+  mediaCarouselItem: { height: 320, marginRight: 0, justifyContent: 'center', alignItems: 'center' },
   extraImage: { width: '100%', height: 320, borderRadius: 10 },
   mediaCounter: {
     position: 'absolute',
