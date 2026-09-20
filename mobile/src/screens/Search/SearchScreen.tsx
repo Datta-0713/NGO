@@ -88,7 +88,7 @@ export const SearchScreen = () => {
           {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
         </Text>
       </View>
-      <TouchableOpacity onPress={() => toggleSave(item)} disabled={savingId === item._id} style={styles.bookmarkButton}><Ionicons name={item.saved ? 'bookmark' : 'bookmark-outline'} size={21} color={item.saved ? Colors.primary : Colors.textLight} /></TouchableOpacity>
+      <TouchableOpacity onPress={() => toggleSave(item)} disabled={savingId === item._id} style={styles.bookmarkIcon}><Ionicons name={item.saved ? 'bookmark' : 'bookmark-outline'} size={21} color={item.saved ? Colors.primary : Colors.textLight} /></TouchableOpacity>
     </TouchableOpacity>
   );
 

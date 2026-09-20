@@ -15,12 +15,15 @@ const STYLES: Record<BadgeVariant, string> = {
 };
 
 const LABELS: Record<BadgeVariant, string> = {
-  published: 'Published',
-  pending:   'Pending',
-  rejected:  'Rejected',
-  admin:     'Admin',
-  user:      'User',
-  default:   'Unknown',
+  published:      'Published',
+  pending:        'Pending',
+  under_review:   'Under Review',
+  needs_changes:  'Needs Changes',
+  rejected:       'Rejected',
+  archived:       'Archived',
+  admin:          'Admin',
+  user:           'User',
+  default:        'Unknown',
 };
 
 interface BadgeProps {

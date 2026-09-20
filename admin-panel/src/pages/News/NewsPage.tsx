@@ -153,14 +153,13 @@ const NewsPage: React.FC = () => {
           <>
             <Button variant="secondary" onClick={() => setDeleteId(null)}>Cancel</Button>
             <Button variant="danger" icon={<Trash2 size={15} />} onClick={handleDelete}>
-              Delete
+              Archive
             </Button>
           </>
         }
       >
         <p className="text-sm text-gray-600">
-          Are you sure you want to permanently delete this news story?
-          This action cannot be undone.
+          This story will be archived and hidden from the public feed. It can be restored by an admin later.
         </p>
       </Modal>
     </div>

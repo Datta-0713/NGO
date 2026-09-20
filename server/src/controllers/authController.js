@@ -92,14 +92,40 @@ const forgotPassword = asyncHandler(async (req, res) => {
   user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000);
   await user.save({ validateBeforeSave: false });
 
-  const resetUrl = `asiannewsbureau://reset-password/${resetToken}`;
-  const message = `Forgot your password? Open this link to reset it:\n${resetUrl}\n\nThis link expires in 10 minutes. If you didn't request this, you can ignore this email.`;
+  // Build a reset link that works everywhere:
+  //  - deep link for the mobile app (asiannewsbureau://reset-password/...)
+  //  - web fallback so the link also opens in a desktop/browser context
+  const mobileResetLink = `asiannewsbureau://reset-password/${resetToken}`;
+  const webOrigin = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
+  const webResetLink = `${webOrigin}/reset-password/${resetToken}`;
+
+  const text = `Forgot your password?
+
+Open this link in the Asian News Bureau app to reset it:
+${mobileResetLink}
+
+Or open this link in your web browser:
+${webResetLink}
+
+This link expires in 10 minutes. If you didn't request a password reset, you can safely ignore this email.`;
+
+  const html = `
+  <div style="font-family: Inter, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; color: #111827;">
+    <h2 style="font-size: 22px; font-weight: 700; margin-bottom: 8px;">Reset your password</h2>
+    <p style="color: #6B7280; margin-bottom: 24px;">We received a request to reset the password for your Asian News Bureau account.</p>
+    <p style="margin-bottom: 24px;">Click the button below to choose a new password:</p>
+    <a href="${webResetLink}" style="display: inline-block; background-color: #2D6A4F; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">Reset Password</a>
+    <p style="color: #9CA3AF; font-size: 12px; margin-top: 24px;">This link expires in 10 minutes. If you didn't request a password reset, you can safely ignore this email.</p>
+    <p style="color: #9CA3AF; font-size: 12px; margin-top: 8px;">Can't open the button? Copy and paste this link into your browser:<br><a href="${webResetLink}" style="color: #2D6A4F;">${webResetLink}</a></p>
+  </div>
+  `;
 
   try {
     await sendEmail({
       to: user.email,
       subject: 'Reset your Asian News Bureau password',
-      text: message,
+      text,
+      html,
     });
   } catch (error) {
     user.resetPasswordToken = undefined;

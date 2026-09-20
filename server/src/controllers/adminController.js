@@ -40,6 +40,8 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     current30,
     previous30,
     contributorsThisMonth,
+    publishedLast30,
+    publishedPrev30,
   ] = await Promise.all([
     News.countDocuments({ status: 'published', deletedAt: null }),
     News.countDocuments({ status: 'pending', deletedAt: null }),
@@ -54,6 +56,8 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     News.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
     News.countDocuments({ createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }),
     User.countDocuments({ storiesCount: { $gt: 0 }, createdAt: { $gte: currentMonthStart } }),
+    News.countDocuments({ status: 'published', publishedAt: { $gte: thirtyDaysAgo } }),
+    News.countDocuments({ status: 'published', publishedAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }),
   ]);
 
   const submissionsLast30Days = await News.aggregate([
@@ -82,10 +86,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     currentMonthSubmissions,
     previousMonthSubmissions,
     metricsChange: {
-      publishedNews: percentChange(
-        await News.countDocuments({ status: 'published', publishedAt: { $gte: thirtyDaysAgo } }),
-        await News.countDocuments({ status: 'published', publishedAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } })
-      ),
+      publishedNews: percentChange(publishedLast30, publishedPrev30),
       submissions: percentChange(current30, previous30),
       contributors: contributorsThisMonth,
       monthOverMonthSubmissions: percentChange(currentMonthSubmissions, previousMonthSubmissions),

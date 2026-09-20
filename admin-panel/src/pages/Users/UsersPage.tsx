@@ -14,31 +14,68 @@ import type { User } from '@/types';
 import { usePagination } from '@/hooks/usePagination';
 import { useDebounce } from '@/hooks/useDebounce';
 
+type UserRoleFilter = '' | 'user' | 'admin';
+type UserStatusFilter = '' | 'active' | 'inactive';
+
 const UsersPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { items: users, total, loading } = useSelector((state: RootState) => state.users);
   const [search, setSearch] = useState('');
+  const [role, setRole] = useState<UserRoleFilter>('');
+  const [status, setStatus] = useState<UserStatusFilter>('');
   const debouncedSearch = useDebounce(search, 500);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { page, limit, goToPage } = usePagination({ initialLimit: 20 });
 
   useEffect(() => {
-    dispatch(fetchUsers({ page, limit, search: debouncedSearch || undefined }));
-  }, [dispatch, page, limit, debouncedSearch]);
+    dispatch(fetchUsers({
+      page,
+      limit,
+      search: debouncedSearch || undefined,
+      role: role || undefined,
+      status: status || undefined,
+    }));
+  }, [dispatch, page, limit, debouncedSearch, role, status]);
 
   const totalPages = Math.ceil(total / limit);
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <h2 className="text-xl font-bold text-gray-900">Contributors ({total})</h2>
-        <div className="w-72">
-          <Input
-            placeholder="Search by name or email..."
-            icon={<Search size={16} />}
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); goToPage(1); }}
-          />
+        <div className="flex items-end gap-3 flex-wrap">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-gray-700">Role</label>
+            <select
+              value={role}
+              onChange={(e) => { setRole(e.target.value as UserRoleFilter); goToPage(1); }}
+              className="w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+              <option value="">All</option>
+              <option value="user">Contributor</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-gray-700">Status</label>
+            <select
+              value={status}
+              onChange={(e) => { setStatus(e.target.value as UserStatusFilter); goToPage(1); }}
+              className="w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+              <option value="">All</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <div className="w-72">
+            <Input
+              placeholder="Search by name or email..."
+              icon={<Search size={16} />}
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); goToPage(1); }}
+            />
+          </div>
         </div>
       </div>
 

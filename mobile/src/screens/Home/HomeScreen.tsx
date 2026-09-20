@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { fetchFeed, toggleLike } from '../../store/slices/feedSlice';
@@ -9,9 +10,9 @@ import { Header } from '../../components/common/Header';
 import { NewsCard } from '../../components/news/NewsCard';
 import { LoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { TopContributorBanner } from '../../components/notifications/TopContributorBanner';
+import { EmptyState } from '../../components/common/EmptyState';
 import { Colors } from '../../constants/colors';
 import { Theme } from '../../constants/theme';
-import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { TabParamList } from '../../navigation/TabNavigator';
 import type { AppStackParamList } from '../../navigation/AppStack';
@@ -23,7 +24,7 @@ export const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const [refreshing, setRefreshing] = useState(false);
 
-  const { items, loading, hasMore, page } = useAppSelector(state => state.feed);
+  const { items, loading, hasMore, page, error } = useAppSelector(state => state.feed);
   const { highlight, unreadCount } = useAppSelector(state => state.notifications);
 
   useEffect(() => {
@@ -31,6 +32,13 @@ export const HomeScreen = () => {
     dispatch(getHighlightThunk());
     dispatch(refreshUnreadCount());
   }, [dispatch]);
+
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(fetchFeed({ page: 1, limit: 10 }));
+      dispatch(refreshUnreadCount());
+    }, [dispatch])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -44,6 +52,10 @@ export const HomeScreen = () => {
     }
   };
 
+  const handleRetry = () => {
+    dispatch(fetchFeed({ page: 1, limit: 10 }));
+  };
+
   const handleLike = (id: string) => {
     const item = items.find(i => i._id === id);
     if (item) dispatch(toggleLike({ id, liked: !!item.liked }));
@@ -54,6 +66,18 @@ export const HomeScreen = () => {
       return <TopContributorBanner highlight={highlight} />;
     }
     return null;
+  };
+
+  const renderErrorBanner = () => {
+    if (!error || items.length === 0) return null;
+    return (
+      <View style={styles.errorBanner}>
+        <Text style={styles.errorBannerText}>{error}</Text>
+        <TouchableOpacity style={styles.errorRetryBtn} onPress={handleRetry}>
+          <Text style={styles.errorRetryBtnText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   const renderEmpty = () => {
@@ -76,7 +100,20 @@ export const HomeScreen = () => {
         </View>
       );
     }
-    return null;
+    if (error) {
+      return (
+        <EmptyState
+          title="Unable to load feed"
+          description={error}
+          emoji="📡"
+          actionLabel="Retry"
+          onActionPress={handleRetry}
+        />
+      );
+    }
+    return (
+      <EmptyState title="No stories yet" description="Be the first to share a story!" emoji="📰" />
+    );
   };
 
   const BellIcon = () => (
@@ -99,6 +136,8 @@ export const HomeScreen = () => {
         rightIcon={<BellIcon />}
         onRightPress={() => navigation.navigate('Updates')}
       />
+
+      {renderErrorBanner()}
 
       <FlatList
         data={items}
@@ -162,5 +201,34 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 10,
     fontWeight: 'bold',
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FEF2F2',
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 12,
+    borderRadius: Theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.error,
+    fontWeight: '500',
+  },
+  errorRetryBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    backgroundColor: Colors.error,
+    borderRadius: 8,
+  },
+  errorRetryBtnText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

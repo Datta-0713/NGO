@@ -54,5 +54,6 @@ userSchema.statics.findByEmail = function (email) {
 };
 
 userSchema.index({ createdAt: -1 });
+userSchema.index({ storiesCount: 1, createdAt: -1 });
 
 module.exports = mongoose.model('User', userSchema);

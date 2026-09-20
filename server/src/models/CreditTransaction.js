@@ -12,5 +12,6 @@ const creditTransactionSchema = new mongoose.Schema({
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
 creditTransactionSchema.index({ user: 1, createdAt: -1 });
+creditTransactionSchema.index({ user: 1, type: 1, createdAt: -1 });
 
 module.exports = mongoose.model('CreditTransaction', creditTransactionSchema);

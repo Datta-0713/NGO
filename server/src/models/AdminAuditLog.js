@@ -14,5 +14,7 @@ const adminAuditLogSchema = new mongoose.Schema({
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
 adminAuditLogSchema.index({ entityType: 1, entityId: 1, createdAt: -1 });
+adminAuditLogSchema.index({ admin: 1, createdAt: -1 });
+adminAuditLogSchema.index({ entityType: 1, entityId: 1 });
 
 module.exports = mongoose.model('AdminAuditLog', adminAuditLogSchema);

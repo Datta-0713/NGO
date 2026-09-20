@@ -35,6 +35,8 @@ export const SubmitNewsScreen = () => {
   const [date, setDate]               = useState(new Date().toISOString().split('T')[0]);
   const [category, setCategory]       = useState<string>('Community');
   const [sourceUrl, setSourceUrl]     = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const dispatch   = useAppDispatch();
   const { submitting } = useAppSelector(state => state.submissions);
@@ -76,16 +78,27 @@ export const SubmitNewsScreen = () => {
     setMediaAssets(prev => prev.filter((_, i) => i !== index));
   };
 
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!title.trim()) errors.title = 'Headline is required';
+    else if (title.trim().length < 10) errors.title = 'Headline must be at least 10 characters';
+    if (!description.trim()) errors.description = 'Full story is required';
+    else if (description.trim().length < 20) errors.description = 'Story must be at least 20 characters';
+    if (!location.trim()) errors.location = 'Location is required';
+    if (!date) errors.date = 'Date is required';
+    else if (isNaN(new Date(date).getTime())) errors.date = 'Enter a valid date (YYYY-MM-DD)';
+    if (sourceUrl.trim() && !/^https?:\/\//i.test(sourceUrl.trim())) {
+      errors.sourceUrl = 'URL must start with http:// or https://';
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   // ── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!title.trim() || !description.trim() || !location.trim() || !date) {
-      Alert.alert('Missing fields', 'Please fill in all required fields.');
-      return;
-    }
-    if (isNaN(new Date(date).getTime())) {
-      Alert.alert('Invalid date', 'Please enter a valid date.');
-      return;
-    }
+    if (!validateForm()) return;
+
+    setUploadProgress(0);
 
     const formData = new FormData();
     formData.append('title',       title.trim());
@@ -104,19 +117,36 @@ export const SubmitNewsScreen = () => {
       } as any);
     });
 
-    if (sourceUrl.trim() && !/^https?:\/\//i.test(sourceUrl.trim())) {
-      Alert.alert('Invalid source URL', 'Please enter a full URL beginning with http:// or https://.');
-      return;
-    }
-
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
     try {
+      // Simulate upload progress since axios doesn't provide upload progress in RN easily
+      progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 10, 90));
+      }, 300);
+
       await dispatch(submitNewsThunk(formData)).unwrap();
+
+      clearInterval(progressInterval);
+      progressInterval = null;
+      setUploadProgress(100);
+
+      setTitle('');
+      setDescription('');
+      setLocation('');
+      setDate(new Date().toISOString().split('T')[0]);
+      setCategory('Community');
+      setSourceUrl('');
+      setMediaAssets([]);
+      setFieldErrors({});
+
       Alert.alert(
         'Submitted!',
         'Your story has been sent for review. You\'ll be notified once it\'s approved.',
         [{ text: 'OK', onPress: () => navigation.navigate('MySubmissions') }]
       );
     } catch (err: any) {
+      if (progressInterval) clearInterval(progressInterval);
+      setUploadProgress(0);
       const msg = typeof err === 'string' ? err : err?.message || 'Failed to submit. Please try again.';
       Alert.alert('Submission failed', msg);
     }
@@ -163,6 +193,7 @@ export const SubmitNewsScreen = () => {
               value={title}
               onChangeText={setTitle}
               maxLength={120}
+              error={fieldErrors.title}
             />
             <Text style={styles.charCount}>{title.length}/120</Text>
 
@@ -175,6 +206,7 @@ export const SubmitNewsScreen = () => {
               numberOfLines={5}
               maxLength={2000}
               style={{ minHeight: 110 }}
+              error={fieldErrors.description}
             />
             <Text style={styles.charCount}>{description.length}/2000</Text>
 
@@ -183,6 +215,7 @@ export const SubmitNewsScreen = () => {
               placeholder="City, Area or Address"
               value={location}
               onChangeText={setLocation}
+              error={fieldErrors.location}
             />
 
             <Input
@@ -192,6 +225,7 @@ export const SubmitNewsScreen = () => {
               onChangeText={setSourceUrl}
               autoCapitalize="none"
               keyboardType="url"
+              error={fieldErrors.sourceUrl}
             />
 
             <Input
@@ -200,6 +234,7 @@ export const SubmitNewsScreen = () => {
               value={date}
               onChangeText={setDate}
               keyboardType="numeric"
+              error={fieldErrors.date}
             />
           </View>
 
@@ -224,13 +259,15 @@ export const SubmitNewsScreen = () => {
 
           {/* ── Submit ── */}
           <View style={styles.footer}>
-            {submitting && (
+            {submitting && uploadProgress > 0 && (
               <View style={styles.uploadingBanner}>
-                <ActivityIndicator size="small" color={Colors.primary} />
+                <View style={styles.progressContainer}>
+                  <View style={[styles.progressBar, { width: `${uploadProgress}%` }]} />
+                </View>
                 <Text style={styles.uploadingText}>
                   {mediaAssets.length > 0
-                    ? `Uploading ${mediaAssets.length} file(s) to cloud — please wait…`
-                    : 'Submitting your story…'}
+                    ? `Uploading ${mediaAssets.length} file(s) — ${uploadProgress}%`
+                    : `Submitting your story — ${uploadProgress}%`}
                 </Text>
               </View>
             )}
@@ -298,6 +335,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF', borderRadius: 10, padding: 12,
     borderWidth: 1, borderColor: '#BFDBFE',
   },
-  uploadingText: { flex: 1, fontSize: 13, color: '#1D4ED8' },
+  progressContainer: {
+    flex: 1,
+    height: 6,
+    backgroundColor: '#BFDBFE',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+    borderRadius: 3,
+  },
+  uploadingText: { fontSize: 13, color: '#1D4ED8', minWidth: 180 },
   footerNote: { fontSize: 12, color: '#9CA3AF', textAlign: 'center', marginTop: 4 },
 });

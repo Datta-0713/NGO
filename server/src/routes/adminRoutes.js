@@ -1,7 +1,7 @@
 'use strict';
 const express = require('express');
 const { getDashboardStats, getAllUsers, getUserById, updateUserStatus, broadcastNotification } = require('../controllers/adminController');
-const { getAdminSubmissionsQueue, getSubmissionById, getSubmissionHistory, claimSubmission, approveSubmission, rejectSubmission, requestChanges } = require('../controllers/submissionController');
+const { getAdminSubmissionsQueue, getSubmissionById, getSubmissionHistory, claimSubmission, approveSubmission, rejectSubmission, requestChanges, updateSubmissionNotes } = require('../controllers/submissionController');
 const { adminAdjustCredits } = require('../controllers/creditController');
 const { getReports, resolveReport } = require('../controllers/reportController');
 const { getAuditLogs } = require('../controllers/auditController');
@@ -23,6 +23,7 @@ router.patch('/submissions/:id/claim', ...adminOnly, mutationLimiter, claimSubmi
 router.patch('/submissions/:id/approve', ...adminOnly, mutationLimiter, approveSubmission);
 router.patch('/submissions/:id/request-changes', ...adminOnly, mutationLimiter, moderationMessageValidation, validate, requestChanges);
 router.patch('/submissions/:id/reject', ...adminOnly, mutationLimiter, moderationMessageValidation, validate, rejectSubmission);
+router.patch('/submissions/:id/notes', ...adminOnly, mutationLimiter, updateSubmissionNotes);
 router.get('/users', ...adminOnly, getAllUsers);
 router.get('/users/:id', ...adminOnly, getUserById);
 router.patch('/users/:id/status', ...adminOnly, mutationLimiter, updateUserStatus);

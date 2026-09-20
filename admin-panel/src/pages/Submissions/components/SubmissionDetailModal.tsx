@@ -25,6 +25,12 @@ export const SubmissionDetailModal: React.FC<Props> = ({ submission, onClose }) 
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [evidenceNotes, setEvidenceNotes] = useState('');
+  const [notesSaving, setNotesSaving] = useState(false);
+  const [notesSaved, setNotesSaved] = useState(false);
+  const [notesError, setNotesError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -34,6 +40,20 @@ export const SubmissionDetailModal: React.FC<Props> = ({ submission, onClose }) 
     }
     return () => { cancelled = true; };
   }, [submission._id, submission.status]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getSubmissionById(submission._id).then(res => {
+      if (!cancelled) {
+        const notes = res.data?.news;
+        if (notes) {
+          setAdminNotes(notes.adminNotes || '');
+          setEvidenceNotes(notes.evidenceNotes || '');
+        }
+      }
+    }).catch(() => null);
+    return () => { cancelled = true; };
+  }, [submission._id]);
 
   const loadHistory = async () => {
     try { const res = await api.getSubmissionHistory(submission._id); setHistory(res.data?.revisions || []); setHistoryOpen(true); }
@@ -60,6 +80,7 @@ export const SubmissionDetailModal: React.FC<Props> = ({ submission, onClose }) 
   return <Modal isOpen={true} onClose={onClose} title="Submission Review" size="lg" footer={<>
     <Button variant="secondary" onClick={onClose}>Close</Button>
     <Button variant="secondary" icon={<History size={16}/>} onClick={loadHistory}>History</Button>
+    <Button variant="secondary" icon={<ClipboardCheck size={16}/>} onClick={() => setNotesOpen(!notesOpen)}>{notesOpen ? 'Hide Notes' : 'Internal Notes'}</Button>
     {submission.status === 'pending' && <Button variant="secondary" icon={<ClipboardCheck size={16}/>} loading={working} onClick={()=>run('claim')}>Claim</Button>}
     {actionable && (submission.status !== 'under_review' || isMine) && !action && <>
       <Button variant="danger" icon={<XCircle size={16}/>} onClick={()=>{setAction('reject');setMessage('')}}>Reject</Button>
@@ -78,6 +99,7 @@ export const SubmissionDetailModal: React.FC<Props> = ({ submission, onClose }) 
     <h3 className="text-lg font-bold text-gray-900 mb-3">{submission.title}</h3><p className="text-sm text-gray-600 leading-relaxed mb-6">{submission.description}</p>
     {submission.rejectionMessage && <div className="p-4 rounded-xl bg-amber-50 border border-amber-100 mb-6"><p className="text-xs font-semibold text-amber-700 uppercase">Moderator feedback</p><p className="text-sm text-gray-700 mt-1">{submission.rejectionMessage}</p></div>}
     {author && <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl mb-6"><Avatar src={author.profilePhoto} name={author.name} size={40}/><div><p className="text-sm font-semibold text-gray-900">{author.name}</p><p className="text-xs text-muted">{author.email}</p></div><div className="ml-auto text-right"><p className="text-xs text-muted">Credits</p><p className="text-sm font-bold text-primary">{author.credits??0}</p></div></div>}
+    {notesOpen && <div className="border rounded-xl overflow-hidden mb-6"><div className="px-4 py-3 bg-gray-50 border-b font-semibold text-sm">Internal Notes (admin only — not visible to contributor)</div><div className="p-4 space-y-4"><div><label className="block text-xs font-medium text-gray-700 mb-1">Admin Notes</label><textarea rows={3} maxLength={5000} placeholder="Private admin notes…" value={adminNotes} onChange={e=>setAdminNotes(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none bg-white focus:outline-none focus:ring-2 focus:ring-primary"/><p className="text-xs text-muted text-right mt-1">{adminNotes.length}/5000</p></div><div><label className="block text-xs font-medium text-gray-700 mb-1">Evidence Notes</label><textarea rows={3} maxLength={5000} placeholder="Evidence / case reference notes…" value={evidenceNotes} onChange={e=>setEvidenceNotes(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none bg-white focus:outline-none focus:ring-2 focus:ring-primary"/><p className="text-xs text-muted text-right mt-1">{evidenceNotes.length}/5000</p></div>{notesSaved && <p className="text-sm text-green-600">Notes saved.</p>}{notesError && <p className="text-sm text-red-600">{notesError}</p>}<div className="flex justify-end gap-2 pt-2 border-t"><Button variant="secondary" onClick={() => { setNotesOpen(false); setNotesSaved(false); setNotesError(''); }}>Cancel</Button><Button variant="primary" loading={notesSaving} onClick={async () => { setNotesSaving(true); setNotesError(''); try { await api.updateSubmissionNotes(submission._id, { adminNotes, evidenceNotes }); setNotesSaved(true); setTimeout(() => { setNotesOpen(false); setNotesSaved(false); }, 2000); } catch (e: any) { setNotesError(e?.response?.data?.message || 'Failed to save notes'); } finally { setNotesSaving(false); } }}>Save Notes</Button></div></div></div>}
     {historyOpen && <div className="border rounded-xl overflow-hidden mb-6"><div className="px-4 py-3 bg-gray-50 border-b font-semibold text-sm">Revision History</div>{history.length===0?<p className="p-4 text-sm text-muted">No revisions recorded.</p>:history.map((h:any)=><div key={`${h._id}-${h.revisionNumber}`} className="p-4 border-b last:border-b-0"><div className="flex justify-between gap-4"><span className="font-semibold text-sm">Revision {h.revisionNumber}</span><span className="text-xs text-muted">{safeFormat(h.createdAt,'MMM d, yyyy HH:mm')}</span></div><p className="text-sm text-gray-700 mt-1">{h.changeNote||'—'}</p><p className="text-xs text-muted mt-1">By {h.author?.name||'Unknown'}</p></div>)}</div>}
     {submission.status==='published' && <div className="border-t border-gray-100 pt-6"><div className="flex items-center gap-2 mb-4"><MessageCircle size={18} className="text-gray-500"/><h4 className="font-bold text-gray-900">Comments</h4><span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs font-semibold">{comments.length}</span></div>{commentsLoading?<p className="text-sm text-gray-500 py-4 text-center">Loading comments...</p>:comments.length===0?<p className="text-sm text-gray-500 py-4 text-center bg-gray-50 rounded-xl">No comments yet</p>:<div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-2">{comments.map(c=><div key={c._id} className="flex gap-3 p-3 bg-gray-50 rounded-xl group relative"><Avatar src={c.user?.profilePhoto} name={c.user?.name||'User'} size={32}/><div className="flex-1 min-w-0"><div className="flex items-center justify-between mb-1"><span className="text-sm font-semibold text-gray-900">{c.user?.name||'Unknown User'}</span><span className="text-xs text-gray-500">{safeFormat(c.createdAt,'MMM d, HH:mm')}</span></div><p className="text-sm text-gray-700">{c.text}</p></div><button onClick={async()=>{if(window.confirm('Delete this comment?')){await deleteComment(submission._id,c._id);setComments(prev=>prev.filter(x=>x._id!==c._id));}}} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg opacity-0 group-hover:opacity-100 shadow-sm transition-opacity" title="Delete Comment"><Trash2 size={14}/></button></div>)}</div>}</div>}
   </Modal>;

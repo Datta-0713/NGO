@@ -13,5 +13,6 @@ const pushDeliverySchema = new mongoose.Schema({
 }, { timestamps: true });
 
 pushDeliverySchema.index({ sentAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 });
+pushDeliverySchema.index({ status: 1, sentAt: 1 });
 
 module.exports = mongoose.model('PushDelivery', pushDeliverySchema);

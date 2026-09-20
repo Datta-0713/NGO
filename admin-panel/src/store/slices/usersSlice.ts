@@ -12,7 +12,7 @@ interface UsersState {
 
 export const fetchUsers = createAsyncThunk(
   'users/fetch',
-  async (params: { page?: number; limit?: number; search?: string }, { rejectWithValue }) => {
+  async (params: { page?: number; limit?: number; search?: string; role?: 'user' | 'admin'; status?: 'active' | 'inactive' }, { rejectWithValue }) => {
     try {
       // API returns full ApiResponse: { success, data: { users, total, page, totalPages }, message }
       return await api.getUsers(params);

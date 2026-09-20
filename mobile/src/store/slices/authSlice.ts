@@ -179,13 +179,25 @@ const authSlice = createSlice({
       })
 
       // GetMe — response.data = ApiResponse, .data.user = User
+      // IMPORTANT: only treat this as an auth failure when the server explicitly
+      // rejects the session (401). Network errors / server timeouts during startup
+      // must NOT wipe the persisted session — initializeAuth handles token cleanup
+      // selectively and relies on this reducer staying silent for non-401 failures.
       .addCase(getMeThunk.fulfilled, (state, action) => {
         state.user = action.payload.data.user;
         state.isAuthenticated = true;
       })
-      .addCase(getMeThunk.rejected, (state) => {
-        state.isAuthenticated = false;
-        state.user = null;
+      .addCase(getMeThunk.rejected, (state, action) => {
+        const status = (action.payload as any)?.status;
+        if (status === 401) {
+          state.isAuthenticated = false;
+          state.user = null;
+          state.accessToken = null;
+          state.refreshToken = null;
+        }
+        // Non-401 failures (network, 5xx): keep the persisted session so the user
+        // stays logged in. Tokens remain in SecureStore and the response
+        // interceptor will refresh the access token on the next real API call.
       })
       // Update Profile
       .addCase(updateProfileThunk.pending, (state) => {

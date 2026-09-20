@@ -17,6 +17,7 @@ import type { NewsItem, Comment } from '../../types';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { toggleLike } from '../../store/slices/feedSlice';
+import { EmptyState } from '../../components/common/EmptyState';
 
 const safeFormat = (d: string, fmt: string) => {
   const p = new Date(d);
@@ -41,7 +42,19 @@ export const NewsDetailScreen = () => {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Multi-media carousel state
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const [isMediaScrolling, setIsMediaScrolling] = useState(false);
+  const mediaListRef = useRef<FlatList>(null);
+
   const scrollRef = useRef<ScrollView>(null);
+
+  const onMediaScroll = (e: any) => {
+    const layoutWidth = e.nativeEvent.layoutMeasurement.width;
+    if (!layoutWidth) return;
+    const index = Math.round(e.nativeEvent.contentOffset.x / layoutWidth);
+    if (index !== activeMediaIndex) setActiveMediaIndex(index);
+  };
 
   // Load news detail
   useEffect(() => {
@@ -67,18 +80,43 @@ export const NewsDetailScreen = () => {
       .finally(() => setCommentsLoading(false));
   }, [id]);
 
-  const handleLike = () => {
+  const handleRetry = () => {
+    setLoading(true);
+    setError('');
+    feedApi.getNewsById(id)
+      .then(data => {
+        setNews(data?.news ?? null);
+        setLoading(false);
+      })
+      .catch(e => {
+        setError(e.response?.data?.message || 'Failed to load story');
+        setLoading(false);
+      });
+  };
+
+  const handleLike = async () => {
     if (!news) return;
-      const alreadyLiked = Boolean(news.liked);
-    dispatch(toggleLike({ id: news._id, liked: !!alreadyLiked }));
+    const alreadyLiked = Boolean(news.liked);
+    const prevLiked = alreadyLiked;
+    const prevLikesCount = news.likesCount || 0;
+    // Optimistic update
     setNews(prev => {
       if (!prev) return prev;
       return {
         ...prev,
         liked: !alreadyLiked,
-        likesCount: Math.max(0, (prev.likesCount || 0) + (alreadyLiked ? -1 : 1)),
+        likesCount: Math.max(0, prevLikesCount + (alreadyLiked ? -1 : 1)),
       };
     });
+    try {
+      await dispatch(toggleLike({ id: news._id, liked: !!alreadyLiked })).unwrap();
+    } catch {
+      // Revert on failure
+      setNews(prev => {
+        if (!prev) return prev;
+        return { ...prev, liked: prevLiked, likesCount: prevLikesCount };
+      });
+    }
   };
 
   const handleSave = async () => {
@@ -115,8 +153,11 @@ export const NewsDetailScreen = () => {
     setPosting(true);
     try {
       const data = await feedApi.addComment(id, commentText.trim());
-      if (data?.comment) setComments(prev => [...prev, data.comment]);
       setCommentText('');
+      // Refresh comment list from server to get updated count/order
+      feedApi.getComments(id).then(data => {
+        if (data?.comments) setComments(data.comments);
+      }).catch(() => {});
     } catch (e: any) {
       Alert.alert('Error', e.response?.data?.message || 'Could not post comment');
     } finally {
@@ -151,7 +192,10 @@ export const NewsDetailScreen = () => {
       <View style={styles.centered}>
         <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
         <Text style={styles.errorText}>{error || 'Story not found'}</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={handleRetry} style={styles.backBtn}>
+          <Text style={styles.backBtnText}>Retry</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backBtn, styles.backBtnSecondary]}>
           <Text style={styles.backBtnText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -240,23 +284,41 @@ export const NewsDetailScreen = () => {
             {/* Body */}
             <Text style={styles.description}>{news.description}</Text>
 
-            {/* Extra media */}
+            {/* Extra media — swipeable carousel with position indicator */}
             {news.media && news.media.length > 1 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.extraMedia}>
-                {news.media.slice(1).map((m, i) => (
-                  m.type === 'video' ? (
-                    <Video
-                      key={i}
-                      source={{ uri: m.url }}
-                      style={styles.extraImage}
-                      useNativeControls
-                      resizeMode={ResizeMode.COVER}
-                    />
-                  ) : (
-                    <Image key={i} source={{ uri: m.url }} style={styles.extraImage} resizeMode="cover" />
-                  )
-                ))}
-              </ScrollView>
+              <View style={styles.mediaCarouselWrap}>
+                <FlatList
+                  ref={mediaListRef}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  pagingEnabled
+                  decelerationRate="fast"
+                  onMomentumScrollEnd={onMediaScroll}
+                  onScrollBeginDrag={() => setIsMediaScrolling(true)}
+                  onScrollEndDrag={() => setIsMediaScrolling(false)}
+                  data={news.media.slice(1)}
+                  keyExtractor={(_, i) => `media-${i}`}
+                  renderItem={({ item }) => (
+                    <View style={styles.mediaCarouselItem}>
+                      {item.type === 'video' ? (
+                        <Video
+                          source={{ uri: item.url }}
+                          style={styles.extraImage}
+                          useNativeControls
+                          resizeMode={ResizeMode.COVER}
+                        />
+                      ) : (
+                        <Image source={{ uri: item.url }} style={styles.extraImage} resizeMode="cover" />
+                      )}
+                    </View>
+                  )}
+                />
+                <View style={styles.mediaCounter}>
+                  <Text style={styles.mediaCounterText}>
+                    {activeMediaIndex + 1} / {news.media.length}
+                  </Text>
+                </View>
+              </View>
             )}
 
             {/* Comments section */}
@@ -268,10 +330,11 @@ export const NewsDetailScreen = () => {
             {commentsLoading ? (
               <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 16 }} />
             ) : comments.length === 0 ? (
-              <View style={styles.noComments}>
-                <Ionicons name="chatbubble-outline" size={32} color="#D1D5DB" />
-                <Text style={styles.noCommentsText}>Be the first to comment</Text>
-              </View>
+              <EmptyState
+                title="No comments yet"
+                description="Be the first to share your thoughts"
+                emoji="💬"
+              />
             ) : (
               comments.map(c => (
                 <View key={c._id} style={styles.commentItem}>
@@ -331,6 +394,7 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff', gap: 12 },
   errorText: { fontSize: 16, color: Colors.error, textAlign: 'center' },
   backBtn: { backgroundColor: Colors.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, marginTop: 8 },
+  backBtnSecondary: { backgroundColor: '#F3F4F6', marginTop: 8 },
   backBtnText: { color: '#fff', fontWeight: '700' },
 
   navBar: {
@@ -371,10 +435,19 @@ const styles = StyleSheet.create({
   contributorBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EDE9FE', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, alignSelf: 'flex-start' },
   contributorText: { fontSize: 11, color: Colors.accent, fontWeight: '600' },
 
-  description: { fontSize: 16, color: '#374151', lineHeight: 26, marginBottom: 20 },
+description: { fontSize: 16, color: '#374151', lineHeight: 26, marginBottom: 20 },
 
-  extraMedia: { marginBottom: 20 },
-  extraImage: { width: 200, height: 140, borderRadius: 10, marginRight: 10 },
+  mediaCarouselWrap: { marginBottom: 20, position: 'relative' },
+  mediaCarouselItem: { width: '100%', height: 320, marginRight: 0, justifyContent: 'center', alignItems: 'center' },
+  extraImage: { width: '100%', height: 320, borderRadius: 10 },
+  mediaCounter: {
+    position: 'absolute',
+    bottom: 12, right: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 20,
+  },
+  mediaCounterText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 
   commentsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
   commentsTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A2E' },

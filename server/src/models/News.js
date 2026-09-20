@@ -58,5 +58,8 @@ newsSchema.index({ status: 1, deletedAt: 1, publishedAt: -1 });
 newsSchema.index({ submittedBy: 1, createdAt: -1 });
 newsSchema.index({ title: 'text', description: 'text', location: 'text' });
 newsSchema.index({ category: 1, status: 1, publishedAt: -1 });
+newsSchema.index({ status: 1, createdAt: -1 });
+newsSchema.index({ submittedBy: 1, status: 1 });
+newsSchema.index({ status: 1, publishedAt: -1 });
 
 module.exports = mongoose.model('News', newsSchema);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Modal, TextInput, Alert, ActivityIndicator,
@@ -6,8 +6,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect } from '@react-navigation/native';
 import { Colors } from '../../constants/colors';
 import { Avatar } from '../../components/common/Avatar';
+import { LoadingSkeleton } from '../../components/common/LoadingSkeleton';
+import { EmptyState } from '../../components/common/EmptyState';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { logoutThunk, updateProfileThunk } from '../../store/slices/authSlice';
@@ -22,19 +25,36 @@ import type { CreditTransaction } from '../../types';
 export const ProfileScreen = () => {
   const dispatch = useAppDispatch();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  const { user } = useAppSelector(state => state.auth);
-  const { creditHistory, loading: creditsLoading } = useAppSelector(state => state.profile);
+  const { user, loading: authLoading } = useAppSelector(state => state.auth);
+  const { creditHistory, loading: creditsLoading, error: creditsError } = useAppSelector(state => state.profile);
 
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editName, setEditName] = useState(user?.name || '');
-  const [editBio, setEditBio] = useState(user?.bio || '');
+  const [editName, setEditName] = useState('');
+  const [editBio, setEditBio] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     dispatch(fetchCreditHistory({ page: 1, limit: 20 }));
   }, [dispatch]);
 
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(fetchCreditHistory({ page: 1, limit: 20 }));
+    }, [dispatch])
+  );
+
+  if (authLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
   if (!user) return null;
+
+  // Sync edit fields from user data
+  const handleFocusEditName = () => { setEditName(user.name); setEditBio(user.bio || ''); setEditModalOpen(true); };
 
   const handleLogout = () => {
     Alert.alert('Log Out', 'Are you sure you want to log out?', [
@@ -120,7 +140,7 @@ export const ProfileScreen = () => {
 
           <TouchableOpacity
             style={styles.editProfileBtn}
-            onPress={() => { setEditName(user.name); setEditBio(user.bio || ''); setEditModalOpen(true); }}
+            onPress={handleFocusEditName}
           >
             <Ionicons name="pencil-outline" size={14} color={Colors.primary} />
             <Text style={styles.editProfileText}>Edit Profile</Text>
@@ -159,8 +179,38 @@ export const ProfileScreen = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Credits Loading */}
+        {creditsLoading && creditHistory.length === 0 && (
+          <View style={styles.creditsSection}>
+            <Text style={styles.sectionTitle}>Credits History</Text>
+            {[1, 2, 3].map(i => (
+              <View key={i} style={styles.creditSkeleton}>
+                <View style={{ flex: 1 }}>
+                  <LoadingSkeleton width="60%" height={14} />
+                  <LoadingSkeleton width="40%" height={12} style={{ marginTop: 6 }} />
+                </View>
+                <LoadingSkeleton width={40} height={16} />
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Credits Error */}
+        {creditsError && creditHistory.length === 0 && (
+          <View style={styles.creditsSection}>
+            <Text style={styles.sectionTitle}>Credits History</Text>
+            <EmptyState
+              title="Failed to load credits"
+              description={creditsError}
+              emoji="💳"
+              actionLabel="Retry"
+              onActionPress={() => dispatch(fetchCreditHistory({ page: 1, limit: 20 }))}
+            />
+          </View>
+        )}
+
         {/* Credits History */}
-        {creditHistory.length > 0 && (
+        {creditHistory.length > 0 && !creditsLoading && (
           <View style={styles.creditsSection}>
             <Text style={styles.sectionTitle}>Credits History</Text>
             {creditHistory.map((t: CreditTransaction) => (
@@ -174,6 +224,11 @@ export const ProfileScreen = () => {
                 </Text>
               </View>
             ))}
+            {creditsError && (
+              <TouchableOpacity onPress={() => dispatch(fetchCreditHistory({ page: 1, limit: 20 }))} style={styles.retryLink}>
+                <Text style={styles.retryLinkText}>Something went wrong. Tap to retry.</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -222,6 +277,7 @@ export const ProfileScreen = () => {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8F9FA' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8F9FA' },
   topBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingVertical: 14, backgroundColor: '#fff',
@@ -298,6 +354,9 @@ const styles = StyleSheet.create({
   transactionAmount: { fontSize: 16, fontWeight: '700' },
   amountPositive: { color: '#22C55E' },
   amountNegative: { color: '#EF4444' },
+  creditSkeleton: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  retryLink: { paddingVertical: 10, alignItems: 'center' },
+  retryLinkText: { color: Colors.primary, fontSize: 13, fontWeight: '600' },
 
   modalSafe: { flex: 1, backgroundColor: '#fff' },
   modalHeader: {

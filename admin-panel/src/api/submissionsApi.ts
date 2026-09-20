@@ -9,3 +9,5 @@ export const claimSubmission = (id: string) => api.patch(`/admin/submissions/${i
 export const approveSubmission = (id: string) => api.patch(`/admin/submissions/${id}/approve`).then(res => res.data);
 export const requestChanges = (id: string, rejectionMessage: string) => api.patch(`/admin/submissions/${id}/request-changes`, { rejectionMessage }).then(res => res.data);
 export const rejectSubmission = (id: string, rejectionMessage: string) => api.patch(`/admin/submissions/${id}/reject`, { rejectionMessage }).then(res => res.data);
+export const updateSubmissionNotes = (id: string, payload: { adminNotes?: string; evidenceNotes?: string }) =>
+  api.patch(`/admin/submissions/${id}/notes`, payload).then(res => res.data);

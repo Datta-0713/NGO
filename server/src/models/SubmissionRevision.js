@@ -15,5 +15,6 @@ const revisionSchema = new mongoose.Schema({
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
 revisionSchema.index({ submission: 1, revisionNumber: -1 }, { unique: true });
+revisionSchema.index({ submission: 1, revisionNumber: 1 });
 
 module.exports = mongoose.model('SubmissionRevision', revisionSchema);

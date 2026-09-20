@@ -3,7 +3,7 @@ import api from './axios';
 /**
  * Users API — admin reads all users, regular routes for profile.
  */
-export const getUsers = (params: { page?: number; limit?: number; search?: string }) =>
+export const getUsers = (params: { page?: number; limit?: number; search?: string; role?: 'user' | 'admin'; status?: 'active' | 'inactive' }) =>
   api.get('/admin/users', { params }).then(res => res.data);
 
 export const getUserById = (id: string) =>

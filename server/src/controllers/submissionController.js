@@ -134,10 +134,15 @@ const claimSubmission = asyncHandler(async (req, res) => {
   sendSuccess(res, 200, { news }, 'Submission claimed for review');
 });
 
+// State machine: pending -> approve->published | requestChanges->needs_changes | reject->rejected | claim->under_review
+// under_review -> approve->published | requestChanges->needs_changes | reject->rejected
+// needs_changes -> ONLY resubmit (back to pending). No approve/requestChanges/reject allowed from needs_changes.
+// published/rejected are finalized.
 const assertReviewAccess = async (id, adminId) => {
   const current = await News.findById(id).select('status claimedBy submittedBy title rejectionMessage media');
   if (!current || current.createdByAdmin) throw new AppError('Submission not found', 404);
-  if (['published', 'rejected'].includes(current.status)) throw new AppError('Submission has already been finalized.', 409);
+  // finalized or in needs_changes state - only resubmission is allowed from needs_changes
+  if (['published', 'rejected', 'needs_changes'].includes(current.status)) throw new AppError('Submission has already been finalized or needs resubmission.', 409);
   if (current.status === 'under_review' && current.claimedBy && String(current.claimedBy) !== String(adminId)) {
     throw new AppError('This submission is currently being reviewed by another admin.', 409);
   }
@@ -223,7 +228,7 @@ const rejectSubmission = asyncHandler(async (req, res) => {
   const message = String(req.body.rejectionMessage || '').trim() || 'This submission was not approved under our community guidelines.';
   const result = await withTransaction(async (session) => {
     const news = await News.findOneAndUpdate(
-      { _id: current._id, status: { $in: ['pending', 'under_review', 'needs_changes'] }, $or: [{ claimedBy: null }, { claimedBy: req.user._id }] },
+      { _id: current._id, status: { $in: ['pending', 'under_review'] }, $or: [{ claimedBy: null }, { claimedBy: req.user._id }] },
       { $set: { status: 'rejected', rejectionMessage: message, reviewedBy: req.user._id, reviewedAt: new Date(), claimedBy: null, claimedAt: null } },
       { new: true, session }
     );
@@ -255,6 +260,8 @@ const resubmitNews = asyncHandler(async (req, res) => {
     const news = await withTransaction(async (session) => {
       const current = await News.findOne({ _id: req.params.id, submittedBy: req.user._id, status: { $in: ['needs_changes', 'rejected'] }, deletedAt: null }).session(session);
       if (!current) throw new AppError('Only a rejected or revision-requested submission can be resubmitted.', 409);
+      // Media handling: if new media uploaded, collect old media for deletion and replace.
+      // If no new media, old media is preserved (oldMedia stays empty, no deletion occurs).
       if (uploaded.length) oldMedia.push(...(current.media || []));
       current.title = req.body.title;
       current.description = req.body.description;
@@ -301,8 +308,34 @@ const getSubmissionById = asyncHandler(async (req, res) => {
   sendSuccess(res, 200, { news, revisions });
 });
 
+/**
+ * PATCH /api/admin/submissions/:id/notes
+ * Updates internal admin/evidence notes on a submission.
+ * Only admins can update notes; the notes are NOT visible to the contributor.
+ */
+const updateSubmissionNotes = asyncHandler(async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) throw new AppError('Invalid submission id', 400);
+  const adminNotes = req.body.adminNotes != null ? String(req.body.adminNotes).slice(0, 5000) : undefined;
+  const evidenceNotes = req.body.evidenceNotes != null ? String(req.body.evidenceNotes).slice(0, 5000) : undefined;
+  if (adminNotes === undefined && evidenceNotes === undefined) {
+    throw new AppError('At least one of adminNotes or evidenceNotes is required.', 400);
+  }
+  const news = await News.findById(req.params.id).select('+adminNotes +evidenceNotes');
+  if (!news) throw new AppError('Submission not found', 404);
+  const before = { adminNotes: news.adminNotes || '', evidenceNotes: news.evidenceNotes || '' };
+  if (adminNotes !== undefined) news.adminNotes = adminNotes;
+  if (evidenceNotes !== undefined) news.evidenceNotes = evidenceNotes;
+  await news.save();
+  await writeAuditLog({
+    admin: req.user._id, action: 'submission_notes_updated', entityType: 'News', entityId: news._id,
+    before, after: { adminNotes: news.adminNotes, evidenceNotes: news.evidenceNotes }, req,
+  });
+  sendSuccess(res, 200, { news: news.toJSON() }, 'Notes updated');
+});
+
 module.exports = {
   submitNews, getMySubmissions, getMySubmissionById, getMySubmissionHistory,
   getAdminSubmissionsQueue, claimSubmission, approveSubmission, requestChanges,
   rejectSubmission, resubmitNews, getSubmissionHistory, getSubmissionById,
+  updateSubmissionNotes,
 };
